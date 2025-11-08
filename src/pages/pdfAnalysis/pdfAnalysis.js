@@ -148,15 +148,20 @@ const PDFAnalysis = () => {
           setProgress(100);
           setProgressMessage('Hoàn thành!');
 
-          // Decode base64 PDF content
+          // Decode base64 PDF content với UTF-8 support
           const pdfBase64 = jobData.result.pdf_content;
-          const pdfBinary = atob(pdfBase64);
-          const pdfArray = new Uint8Array(pdfBinary.length);
-          for (let i = 0; i < pdfBinary.length; i++) {
-            pdfArray[i] = pdfBinary.charCodeAt(i);
+          
+          // Decode base64 thành binary string
+          const binaryString = atob(pdfBase64);
+          
+          // Chuyển binary string thành Uint8Array
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
           }
           
-          const blob = new Blob([pdfArray], { type: 'application/pdf' });
+          // Tạo Blob từ Uint8Array
+          const blob = new Blob([bytes], { type: 'application/pdf' });
           const url = URL.createObjectURL(blob);
           
           setResultPdfUrl(url);

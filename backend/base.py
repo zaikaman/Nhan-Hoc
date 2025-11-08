@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import roadmap
 import quiz
 import generativeResources
@@ -10,6 +10,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 api = Flask(__name__)
+
+# Đảm bảo JSON response sử dụng UTF-8
+api.config['JSON_AS_ASCII'] = False
+api.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'
 
 # Cấu hình CORS cho production
 CORS(api, 
@@ -377,7 +381,7 @@ def get_pdf_analysis_status(job_id):
     job = pdfAnalysis.get_pdf_job_status(job_id)
     
     if job is None:
-        return {"error": "Không tìm thấy job"}, 404
+        return jsonify({"error": "Không tìm thấy job"}), 404
     
     response = {
         "job_id": job['job_id'],
@@ -392,7 +396,8 @@ def get_pdf_analysis_status(job_id):
     elif job['status'] == 'failed':
         response['error'] = job.get('error', 'Unknown error')
     
-    return response, 200
+    # Đảm bảo response được encode UTF-8 đúng cách
+    return jsonify(response), 200
 import recommendations
 
 # ===== PERSONALIZED RECOMMENDATIONS ENDPOINTS =====

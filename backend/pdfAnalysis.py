@@ -913,20 +913,21 @@ def process_pdf_job(job_id, pdf_path, filename):
         # Progress 95-99%: Encode và lưu trữ
         update_progress(job_id, 97, "Đang lưu kết quả...")
         
-        # Encode PDF content thành base64 để lưu trữ
-        pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
+        # Encode PDF content thành base64 để lưu trữ - Đảm bảo UTF-8 safe
+        pdf_base64 = base64.b64encode(pdf_content).decode('ascii')
         
         # Progress 99%: Hoàn thành
         update_progress(job_id, 99, "Hoàn tất xử lý")
         time.sleep(0.2)
         
-        # Cập nhật kết quả
+        # Cập nhật kết quả với UTF-8 encoding
         pdf_job_storage[job_id]['status'] = 'completed'
         pdf_job_storage[job_id]['progress'] = 100
         pdf_job_storage[job_id]['progress_message'] = "Hoàn thành!"
         pdf_job_storage[job_id]['result'] = {
             'pdf_content': pdf_base64,
-            'filename': f'phan_tich_{filename}'
+            'filename': f'phan_tich_{filename}',
+            'encoding': 'utf-8'  # Thêm metadata về encoding
         }
         pdf_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
         pdf_job_storage[job_id]['completed_at'] = datetime.now().isoformat()
