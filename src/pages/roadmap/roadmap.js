@@ -5,6 +5,7 @@ import "./roadmap.css";
 import Header from "../../components/header/header";
 import Loader from "../../components/loader/loader";
 import Modal from "../../components/modal/modal";
+import API_CONFIG from "../../config/api";
 import {
   CirclePlus,
   ChevronDown,
@@ -300,7 +301,7 @@ const RoadmapPage = (props) => {
 
     const generateNewResource = async () => {
       setLoading(true);
-      axios.defaults.baseURL = "http://localhost:5000";
+      axios.defaults.baseURL = API_CONFIG.baseURL;
 
       try {
         const res = await axios({

@@ -4,3 +4,4 @@ protobuf>=5.26.1,<6.0.0
 python-dotenv==1.0.1
 openai
 pillow>=9.2.0,<12.0
+gunicorn==21.2.0

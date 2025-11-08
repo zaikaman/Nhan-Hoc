@@ -4,6 +4,7 @@ import axios from "axios";
 import "./quiz.css";
 import Header from "../../components/header/header";
 import Loader from "../../components/loader/loader";
+import API_CONFIG from "../../config/api";
 import { CircleCheck, CircleX } from "lucide-react";
 
 const Question = ({ questionData, num, style }) => {
@@ -144,7 +145,7 @@ const QuizPage = (props) => {
       return;
     } else {
       console.log("fetching questions...");
-      axios.defaults.baseURL = "http://localhost:5000";
+      axios.defaults.baseURL = API_CONFIG.baseURL;
 
       axios({
         method: "POST",

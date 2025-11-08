@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import "./topic.css";
 import Header from "../../components/header/header";
+import API_CONFIG from "../../config/api";
 import { ArrowRight, LibraryBig, Search } from "lucide-react";
 import Loader from "../../components/loader/loader";
 
@@ -190,7 +191,7 @@ const TopicPage = (props) => {
           if (!Object.keys(topics).includes(topic)) {
             let data = { topic, time, knowledge_level: knowledgeLevel };
             console.log(data);
-            axios.defaults.baseURL = "http://localhost:5000";
+            axios.defaults.baseURL = API_CONFIG.baseURL;
             axios({
               method: "POST",
               url: "/api/roadmap",

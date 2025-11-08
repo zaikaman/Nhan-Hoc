@@ -3,9 +3,30 @@ import roadmap
 import quiz
 import generativeResources
 from flask_cors import CORS
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 api = Flask(__name__)
-CORS(api)
+
+# Cấu hình CORS cho production
+CORS(api, resources={
+    r"/api/*": {
+        "origins": [
+            "http://localhost:3000",
+            "https://*.vercel.app",
+            "https://*.herokuapp.com"
+        ],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
+
+@api.route("/", methods=["GET"])
+def health_check():
+    return {"status": "ok", "message": "AI Learning Platform API is running"}, 200
 
 
 @api.route("/api/roadmap", methods=["POST"])
@@ -38,16 +59,16 @@ def get_quiz():
     return response_body
 
 
-@api.route("/api/translate", methods=["POST"])
-def get_translations():
-    req = request.get_json()
+# @api.route("/api/translate", methods=["POST"])
+# def get_translations():
+#     req = request.get_json()
 
-    text = req.get("textArr")
-    toLang = req.get("toLang")
+#     text = req.get("textArr")
+#     toLang = req.get("toLang")
 
-    print(f"Translating to {toLang}: { text}")
-    translated_text = translate.translate_text_arr(text_arr=text, target=toLang)
-    return translated_text
+#     print(f"Translating to {toLang}: { text}")
+#     translated_text = translate.translate_text_arr(text_arr=text, target=toLang)
+#     return translated_text
 
 
 @api.route("/api/generate-resource", methods=["POST"])

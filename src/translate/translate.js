@@ -1,8 +1,9 @@
 import axios from "axios";
+import API_CONFIG from "../config/api";
 
 function translate(text, toLang) {
   return new Promise((resolve, reject) => {
-    axios.defaults.baseURL = "http://localhost:5000";
+    axios.defaults.baseURL = API_CONFIG.baseURL;
 
     axios({
       method: "POST",
