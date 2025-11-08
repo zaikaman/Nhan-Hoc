@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { hasUserProfile, saveUserProfile } from './utils/indexedDB';
 import WelcomeModal from './components/welcomeModal/welcomeModal';
 import Loader from './components/loader/loader';
+import VapiWidget from './components/vapiWidget/vapiWidget';
 
 const AppWrapper = ({ children }) => {
   const [loading, setLoading] = useState(true);
@@ -49,6 +50,8 @@ const AppWrapper = ({ children }) => {
     <>
       {showWelcome && <WelcomeModal onSubmit={handleWelcomeSubmit} />}
       {children}
+      {/* VAPI Voice Agent Widget - Hiển thị trên toàn bộ app */}
+      <VapiWidget />
     </>
   );
 };

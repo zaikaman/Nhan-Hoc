@@ -258,7 +258,7 @@
 }
 
 .saved-badge {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   color: white;
   padding: 0.6em 1.2em;
   border-radius: 20px;
@@ -268,8 +268,8 @@
 }
 
 .cached-info {
-  background-color: rgba(102, 126, 234, 0.2);
-  border-left: 4px solid #667eea;
+  background-color: rgba(79, 172, 254, 0.2);
+  border-left: 4px solid #4facfe;
   padding: 1em 1.5em;
   border-radius: 10px;
   margin-bottom: 2rem !important;
@@ -297,15 +297,15 @@
 }
 
 .resources button.cache-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-color: #4facfe;
   color: white;
 }
 
 .resources button.cache-button:hover {
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
   color: white;
-  box-shadow: 0 0 25px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 0 25px rgba(79, 172, 254, 0.5);
   transform: translateY(-5px);
 }
 
