@@ -7,6 +7,7 @@ import App from "./App";
 import AppWrapper from "./AppWrapper";
 import DebugDBPage from "./pages/debug/debugDB";
 import ChatPage from "./pages/chat/chat";
+import PDFAnalysis from "./pages/pdfAnalysis/pdfAnalysis";
 import reportWebVitals from "./reportWebVitals";
 
 const router = createBrowserRouter([
@@ -45,6 +46,10 @@ const router = createBrowserRouter([
   {
     path: "/recommendations/",
     element: <RecommendationsPage />,
+  },
+  {
+    path: "/pdf-analysis/",
+    element: <PDFAnalysis />,
   },
   {
     path: "/chat/",

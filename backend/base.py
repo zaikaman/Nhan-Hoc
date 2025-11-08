@@ -325,6 +325,9 @@ def generate_study_plan():
         return {"error": str(e)}, 500
 
 
+# ===== PDF ANALYSIS ENDPOINTS =====
+import pdfAnalysis
+
 # ===== PERSONALIZED RECOMMENDATIONS ENDPOINTS =====
 import recommendations
 
@@ -425,3 +428,21 @@ def get_difficulty_adjustment():
     except Exception as e:
         print(f"Lỗi trong difficulty adjustment: {str(e)}")
         return {"error": str(e)}, 500
+
+
+@api.route("/api/analyze-pdf", methods=["POST", "OPTIONS"])
+def analyze_pdf():
+    """Phân tích PDF và tạo flashcard học tập"""
+    if request.method == "OPTIONS":
+        return {}, 200
+    
+    try:
+        result = pdfAnalysis.phân_tích_pdf()
+        return result
+        
+    except Exception as e:
+        print(f"Lỗi trong PDF analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
+
