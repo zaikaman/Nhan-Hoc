@@ -134,18 +134,71 @@ const RoadmapPage = (props) => {
         <div className="flexbox buttons" style={{ flexDirection: "column" }}>
           <button
             className="resourcesButton"
-            onClick={() => {
-              setModalOpen(true);
-              setResourceParam({
+            onClick={async () => {
+              const params = {
                 subtopic: subtopic["chủ đề con"] || subtopic.subtopic,
                 description: subtopic["mô tả"] || subtopic.description,
                 time: subtopic["thời gian"] || subtopic.time,
                 course: topic,
                 knowledge_level: topicDetails?.knowledge_level || "-",
-              });
+              };
+              setResourceParam(params);
+              
+              // Kiểm tra cache trước
+              try {
+                const exists = await resourceExists(params.course, params.subtopic);
+                
+                if (exists) {
+                  // Nếu có cache, load từ cache
+                  setModalOpen(true);
+                  setLoading(true);
+                  const cachedResource = await getResource(params.course, params.subtopic);
+                  
+                  if (cachedResource) {
+                    setLoading(false);
+                    setResources(
+                      <div className="res">
+                        <div className="res-header">
+                          <h2 className="res-heading">{cachedResource.subtopic}</h2>
+                          <button 
+                            className="delete-cache-btn"
+                            onClick={async () => {
+                              if (window.confirm('Bạn có chắc muốn xóa tài nguyên này khỏi bộ nhớ?')) {
+                                await deleteResource(params.course, params.subtopic);
+                                setResources(null);
+                                setModalOpen(false);
+                                alert('Đã xóa tài nguyên khỏi bộ nhớ');
+                              }
+                            }}
+                            title="Xóa khỏi bộ nhớ"
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                        </div>
+                        <p className="cached-info">
+                          📦 Đã lưu từ cache • {new Date(cachedResource.timestamp).toLocaleString('vi-VN')}
+                        </p>
+                        <Markdown>{cachedResource.content}</Markdown>
+                      </div>
+                    );
+                    setTimeout(() => {
+                      setConfettiExplode(true);
+                    }, 300);
+                  }
+                } else {
+                  // Nếu không có cache, tạo mới bằng AI
+                  setModalOpen(true);
+                  generateResourceFromButton(params);
+                }
+              } catch (error) {
+                console.error('Lỗi khi kiểm tra cache:', error);
+                // Nếu có lỗi, vẫn tạo mới
+                setModalOpen(true);
+                generateResourceFromButton(params);
+              }
             }}
           >
-            Resources
+            Tạo tài liệu
           </button>
           {quizStats && quizStats.timeTaken ? (
             <div className="quiz_completed">
@@ -239,6 +292,118 @@ const RoadmapPage = (props) => {
       </div>
     );
   };
+  // Hàm tạo resource từ nút bấm
+  const generateResourceFromButton = async (params) => {
+    setLoading(true);
+    axios.defaults.baseURL = API_CONFIG.baseURL;
+
+    try {
+      // Gọi API để tạo job
+      const response = await axios({
+        method: "POST",
+        url: "/api/generate-resource",
+        data: params,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const { job_id, status, message } = response.data;
+      console.log(`[Resource] Job đã tạo - ID: ${job_id}, Status: ${status}`);
+      console.log(`[Resource] ${message}`);
+
+      // Polling để kiểm tra trạng thái
+      await pollResourceStatusFromButton(job_id, params);
+
+    } catch (err) {
+      setLoading(false);
+      console.error('Lỗi:', err);
+      alert("Lỗi khi tạo tài nguyên");
+      navigate("/roadmap?topic=" + encodeURI(topic));
+    }
+  };
+
+  // Hàm polling cho resource từ nút bấm
+  const pollResourceStatusFromButton = async (jobId, params, maxAttempts = 120, interval = 2000) => {
+    let attempts = 0;
+
+    const checkStatus = async () => {
+      try {
+        attempts++;
+        console.log(`[Resource Polling] Lần thử ${attempts}/${maxAttempts} - Job ID: ${jobId}`);
+
+        const response = await axios.get(`/api/generate-resource/status/${jobId}`);
+        const jobData = response.data;
+
+        console.log(`[Resource Polling] Trạng thái: ${jobData.status}`);
+
+        if (jobData.status === 'completed') {
+          console.log('[Resource Polling] ✅ Hoàn thành!');
+
+          // Lưu vào IndexedDB
+          const resourceData = {
+            topic: params.course,
+            subtopic: params.subtopic,
+            description: params.description,
+            time: params.time,
+            knowledge_level: params.knowledge_level,
+            content: jobData.result,
+          };
+
+          await saveResource(resourceData);
+          console.log('✅ Đã lưu resource vào IndexedDB');
+
+          setLoading(false);
+          setResources(
+            <div className="res">
+              <div className="res-header">
+                <h2 className="res-heading">{params.subtopic}</h2>
+                <span className="saved-badge">💾 Đã lưu vào bộ nhớ</span>
+              </div>
+              <Markdown>{jobData.result}</Markdown>
+            </div>
+          );
+
+          setTimeout(() => {
+            setConfettiExplode(true);
+            console.log("exploding confetti...");
+          }, 500);
+          return true;
+        }
+        else if (jobData.status === 'failed') {
+          console.error('[Resource Polling] ❌ Lỗi:', jobData.error);
+          setLoading(false);
+          alert(`Lỗi khi tạo tài nguyên: ${jobData.error || 'Unknown error'}`);
+          return true;
+        }
+        else if (attempts >= maxAttempts) {
+          console.error('[Resource Polling] ⏱️ Timeout');
+          setLoading(false);
+          alert("Quá trình tạo tài nguyên mất quá nhiều thời gian. Vui lòng thử lại sau.");
+          return true;
+        }
+
+        // Tiếp tục polling
+        setTimeout(checkStatus, interval);
+        return false;
+
+      } catch (error) {
+        console.error('[Resource Polling] Lỗi khi kiểm tra trạng thái:', error);
+
+        if (attempts >= maxAttempts) {
+          setLoading(false);
+          alert("Không thể kiểm tra trạng thái job. Vui lòng thử lại.");
+          return true;
+        }
+
+        setTimeout(checkStatus, interval);
+        return false;
+      }
+    };
+
+    await checkStatus();
+  };
+
   const ResourcesSection = ({ children }) => {
     // Kiểm tra cache khi component mount hoặc resourceParam thay đổi
     useEffect(() => {
@@ -417,7 +582,7 @@ const RoadmapPage = (props) => {
     };
 
     return (
-      <div className="flexbox resources">
+      <div className="flexbox resources" style={{ display: 'none' }}>
         <div className="generativeFill">
           {hasCache && (
             <button
@@ -458,6 +623,7 @@ const RoadmapPage = (props) => {
         onClose={() => {
           setModalOpen(false);
           setResources(null);
+          setConfettiExplode(false);
         }}
       >
         {!resources ? (

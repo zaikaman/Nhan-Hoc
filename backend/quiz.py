@@ -25,7 +25,11 @@ job_storage = {}
 
 def get_quiz_sync(course, topic, subtopic, description, num_questions=5):
     """Hàm tạo quiz đồng bộ (blocking)"""
-    system_instruction = f"""Bạn là một trợ lý AI cung cấp bài kiểm tra để đánh giá sự hiểu biết của người dùng về một chủ đề. Bài kiểm tra sẽ dựa trên chủ đề, chủ đề con và mô tả của chủ đề con để xác định chính xác nội dung cần học. Xuất câu hỏi ở định dạng JSON. Các câu hỏi phải là câu hỏi trắc nghiệm, có thể bao gồm tính toán nếu cần thiết. Tạo CHÍNH XÁC {num_questions} câu hỏi. Bao gồm các câu hỏi yêu cầu suy nghĩ sâu sắc. xuất ở định dạng {{questions:[ {{question: "...", options:[...], answerIndex:"...", reason:"..."}}]"""
+    system_instruction = f"""Bạn là một trợ lý AI cung cấp bài kiểm tra để đánh giá sự hiểu biết của người dùng về một chủ đề. Bài kiểm tra sẽ dựa trên chủ đề, chủ đề con và mô tả của chủ đề con để xác định chính xác nội dung cần học. Xuất câu hỏi ở định dạng JSON. Các câu hỏi phải là câu hỏi trắc nghiệm, có thể bao gồm tính toán nếu cần thiết. Tạo CHÍNH XÁC {num_questions} câu hỏi. Bao gồm các câu hỏi yêu cầu suy nghĩ sâu sắc. 
+
+QUAN TRỌNG: answerIndex phải là số nguyên (0, 1, 2, hoặc 3) đại diện cho vị trí của đáp án đúng trong mảng options (bắt đầu từ 0).
+
+Xuất ở định dạng JSON: {{questions:[ {{question: "...", options:["option1", "option2", "option3", "option4"], answerIndex: 0, reason:"..."}}]}}"""
 
     response = client.chat.completions.create(
         model=os.environ.get("OPENAI_MODEL", "gpt-5-nano-2025-08-07"),
@@ -43,7 +47,16 @@ def get_quiz_sync(course, topic, subtopic, description, num_questions=5):
     
     result = response.choices[0].message.content
     print(result)
-    return json.loads(result)
+    quiz_data = json.loads(result)
+    
+    # Validate và convert answerIndex thành số nguyên
+    if 'questions' in quiz_data:
+        for question in quiz_data['questions']:
+            if 'answerIndex' in question:
+                # Chuyển đổi sang int nếu là string
+                question['answerIndex'] = int(question['answerIndex'])
+    
+    return quiz_data
 
 
 def process_quiz_job(job_id, course, topic, subtopic, description, num_questions=5):

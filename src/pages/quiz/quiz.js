@@ -7,8 +7,22 @@ import Loader from "../../components/loader/loader";
 import API_CONFIG from "../../config/api";
 import { CircleCheck, CircleX } from "lucide-react";
 
+// Helper function để đảm bảo answerIndex là số nguyên
+const normalizeQuizData = (questions) => {
+  return questions.map(q => ({
+    ...q,
+    answerIndex: typeof q.answerIndex === 'string' ? parseInt(q.answerIndex) : q.answerIndex
+  }));
+};
+
 const Question = ({ questionData, num, style }) => {
   const [attempted, setAttempted] = useState(false);
+  
+  // Debug: Kiểm tra kiểu dữ liệu của answerIndex
+  useEffect(() => {
+    console.log(`Question ${num} - answerIndex:`, questionData.answerIndex, typeof questionData.answerIndex);
+  }, [questionData.answerIndex, num]);
+  
   return (
     <div className="question" style={style}>
       <h3>
@@ -17,6 +31,7 @@ const Question = ({ questionData, num, style }) => {
       </h3>
       <div className="flexbox options">
         {questionData.options.map((option, index) => {
+          const isCorrectAnswer = index === questionData.answerIndex;
           return (
             <div className="option" key={index}>
               <input
@@ -24,7 +39,7 @@ const Question = ({ questionData, num, style }) => {
                 name={"ques" + (num + 1)}
                 id={"ques" + (num + 1) + "index" + index}
                 className={
-                  (index === questionData.answerIndex ? "correct" : "wrong") +
+                  (isCorrectAnswer ? "correct" : "wrong") +
                   " " +
                   (attempted ? "attempted" : "")
                 }
@@ -37,8 +52,11 @@ const Question = ({ questionData, num, style }) => {
                         new Date().getTime() - window.startTime;
                       console.log(window.timeTaken);
                     }
-                    if (index === questionData.answerIndex) {
+                    if (isCorrectAnswer) {
                       window.numCorrect++;
+                      console.log(`✓ Đúng! Đáp án: ${index}`);
+                    } else {
+                      console.log(`✗ Sai! Chọn: ${index}, Đúng: ${questionData.answerIndex}`);
                     }
                     window.numAttmpt++;
                     console.log(
@@ -53,7 +71,7 @@ const Question = ({ questionData, num, style }) => {
               <label htmlFor={"ques" + (num + 1) + "index" + index}>
                 {option}
               </label>
-              {index === questionData.answerIndex ? (
+              {isCorrectAnswer ? (
                 <CircleCheck
                   className="optionIcon"
                   size={35}
@@ -90,6 +108,8 @@ const QuizPage = (props) => {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState("Đang tạo câu hỏi cá nhân hóa cho bạn...");
+  const [showResult, setShowResult] = useState(false);
+  const [quizResult, setQuizResult] = useState(null);
 
   const navigate = useNavigate();
 
@@ -149,16 +169,17 @@ const QuizPage = (props) => {
         if (jobData.status === 'completed') {
           console.log('[Quiz Polling] ✅ Hoàn thành!');
 
-          setQuestions(jobData.result.questions);
+          const normalizedQuestions = normalizeQuizData(jobData.result.questions);
+          setQuestions(normalizedQuestions);
           
           // Lưu vào localStorage với key bao gồm số lượng câu hỏi
           const quizzes = JSON.parse(localStorage.getItem("quizzes")) || {};
           const cacheKey = `${weekNum}_${subtopicNum}_${numQuestions}`;
           quizzes[course] = quizzes[course] || {};
-          quizzes[course][cacheKey] = jobData.result.questions;
+          quizzes[course][cacheKey] = normalizedQuestions;
           localStorage.setItem("quizzes", JSON.stringify(quizzes));
           
-          window.numQues = jobData.result.questions.length;
+          window.numQues = normalizedQuestions.length;
           setLoading(false);
           window.startTime = new Date().getTime();
           window.numAttmpt = 0;
@@ -249,8 +270,9 @@ const QuizPage = (props) => {
       quizzes[course][cacheKey]
     ) {
       console.log("Tìm thấy quiz trong cache:", cacheKey);
-      setQuestions(quizzes[course][cacheKey]);
-      window.numQues = quizzes[course][cacheKey].length;
+      const normalizedQuestions = normalizeQuizData(quizzes[course][cacheKey]);
+      setQuestions(normalizedQuestions);
+      window.numQues = normalizedQuestions.length;
       setLoading(false);
       window.startTime = new Date().getTime();
       window.numAttmpt = 0;
@@ -291,11 +313,60 @@ const QuizPage = (props) => {
                 (window.timeTaken / (5 * 60 * 1000 * window.numQues));
             localStorage.setItem("hardnessIndex", hardnessIndex);
             localStorage.setItem("quizStats", JSON.stringify(quizStats));
-            navigate("/roadmap?topic=" + encodeURI(course));
+            
+            // Hiển thị kết quả thay vì navigate ngay
+            setQuizResult({
+              numCorrect: window.numCorrect,
+              numQues: window.numQues,
+              timeTaken: window.timeTaken,
+              percentage: ((window.numCorrect * 100) / window.numQues).toFixed(1)
+            });
+            setShowResult(true);
           }}
         >
           Nộp bài
         </button>
+      </div>
+    );
+  };
+
+  const ResultModal = () => {
+    if (!showResult || !quizResult) return null;
+    
+    const isPassed = parseFloat(quizResult.percentage) >= 70;
+    
+    return (
+      <div className="result-modal-overlay">
+        <div className="result-modal">
+          <div className={`result-icon ${isPassed ? 'passed' : 'failed'}`}>
+            {isPassed ? '🎉' : '📚'}
+          </div>
+          <h2 className="result-title">
+            {isPassed ? 'Xuất sắc!' : 'Cần cố gắng thêm!'}
+          </h2>
+          <div className="result-stats">
+            <div className="stat-item">
+              <span className="stat-label">Điểm số</span>
+              <span className="stat-value">{quizResult.percentage}%</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Đúng</span>
+              <span className="stat-value">{quizResult.numCorrect}/{quizResult.numQues}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Thời gian</span>
+              <span className="stat-value">{(quizResult.timeTaken / 1000).toFixed(0)}s</span>
+            </div>
+          </div>
+          <div className="result-actions">
+            <button 
+              className="btn-back-roadmap"
+              onClick={() => navigate("/roadmap?topic=" + encodeURI(course))}
+            >
+              Quay về Roadmap
+            </button>
+          </div>
+        </div>
       </div>
     );
   };
@@ -306,6 +377,7 @@ const QuizPage = (props) => {
       <Loader style={{ display: loading ? "block" : "none" }}>
         {loadingMessage}
       </Loader>
+      <ResultModal />
       <div className="content">
         <h1>{subtopic}</h1>
         <h3 style={{ opacity: "0.61", fontWeight: "300", marginBottom: "2em" }}>

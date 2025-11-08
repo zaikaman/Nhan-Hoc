@@ -103,7 +103,7 @@ const ResourcesPage = () => {
             <h2>Tài nguyên đã lưu</h2>
           </div>
 
-          {stats && (
+          {/* {stats && (
             <div className="stats-card">
               <div className="stat-item">
                 <TrendingUp size={20} />
@@ -122,7 +122,7 @@ const ResourcesPage = () => {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
           <div className="filter-section">
             <label>Lọc theo chủ đề:</label>
