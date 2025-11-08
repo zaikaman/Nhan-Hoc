@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import "./quiz.css";
@@ -127,60 +127,7 @@ const QuizPage = (props) => {
     setDescription(currentSubtopic["mô tả"] || currentSubtopic.description);
   }, [course, navigate, weekNum, subtopicNum]);
 
-  useEffect(() => {
-    console.log(course, topic, subtopic, description);
-    if (!course || !topic || !subtopic || !description) return;
-    
-    const quizzes = JSON.parse(localStorage.getItem("quizzes")) || {};
-    if (
-      quizzes[course] &&
-      quizzes[course][weekNum] &&
-      quizzes[course][weekNum][subtopicNum]
-    ) {
-      setQuestions(quizzes[course][weekNum][subtopicNum]);
-      window.numQues = quizzes[course][weekNum][subtopicNum].length;
-      setLoading(false);
-      window.startTime = new Date().getTime();
-      window.numAttmpt = 0;
-      window.numCorrect = 0;
-      return;
-    }
-    
-    // Nếu chưa có quiz trong cache, tạo mới với polling
-    fetchQuizWithPolling();
-    
-  }, [course, topic, subtopic, description, subtopicNum, weekNum]);
-
-  const fetchQuizWithPolling = async () => {
-    try {
-      console.log("Đang tạo quiz job...");
-      axios.defaults.baseURL = API_CONFIG.baseURL;
-
-      // Gọi API để tạo job
-      const response = await axios({
-        method: "POST",
-        url: "/api/quiz",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        data: { course, topic, subtopic, description },
-      });
-
-      const { job_id, status, message } = response.data;
-      console.log(`[Quiz] Job đã tạo - ID: ${job_id}, Status: ${status}`);
-      console.log(`[Quiz] ${message}`);
-
-      // Polling để kiểm tra trạng thái
-      await pollQuizStatus(job_id);
-
-    } catch (error) {
-      console.error('Lỗi:', error);
-      setLoading(false);
-      alert("Đã xảy ra lỗi khi lấy bài kiểm tra. Vui lòng thử lại sau.");
-    }
-  };
-
-  const pollQuizStatus = async (jobId, maxAttempts = 120, interval = 2000) => {
+  const pollQuizStatus = useCallback(async (jobId, maxAttempts = 120, interval = 2000) => {
     let attempts = 0;
 
     const checkStatus = async () => {
@@ -249,7 +196,60 @@ const QuizPage = (props) => {
     };
 
     await checkStatus();
-  };
+  }, [course, weekNum, subtopicNum]);
+
+  const fetchQuizWithPolling = useCallback(async () => {
+    try {
+      console.log("Đang tạo quiz job...");
+      axios.defaults.baseURL = API_CONFIG.baseURL;
+
+      // Gọi API để tạo job
+      const response = await axios({
+        method: "POST",
+        url: "/api/quiz",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        data: { course, topic, subtopic, description },
+      });
+
+      const { job_id, status, message } = response.data;
+      console.log(`[Quiz] Job đã tạo - ID: ${job_id}, Status: ${status}`);
+      console.log(`[Quiz] ${message}`);
+
+      // Polling để kiểm tra trạng thái
+      await pollQuizStatus(job_id);
+
+    } catch (error) {
+      console.error('Lỗi:', error);
+      setLoading(false);
+      alert("Đã xảy ra lỗi khi lấy bài kiểm tra. Vui lòng thử lại sau.");
+    }
+  }, [course, topic, subtopic, description, pollQuizStatus]);
+
+  useEffect(() => {
+    console.log(course, topic, subtopic, description);
+    if (!course || !topic || !subtopic || !description) return;
+    
+    const quizzes = JSON.parse(localStorage.getItem("quizzes")) || {};
+    if (
+      quizzes[course] &&
+      quizzes[course][weekNum] &&
+      quizzes[course][weekNum][subtopicNum]
+    ) {
+      setQuestions(quizzes[course][weekNum][subtopicNum]);
+      window.numQues = quizzes[course][weekNum][subtopicNum].length;
+      setLoading(false);
+      window.startTime = new Date().getTime();
+      window.numAttmpt = 0;
+      window.numCorrect = 0;
+      return;
+    }
+    
+    // Nếu chưa có quiz trong cache, tạo mới với polling
+    fetchQuizWithPolling();
+    
+  }, [course, topic, subtopic, description, subtopicNum, weekNum, fetchQuizWithPolling]);
 
   const SubmitButton = () => {
     return (
