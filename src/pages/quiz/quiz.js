@@ -96,6 +96,8 @@ const QuizPage = (props) => {
   const course = searchParams.get("topic");
   const weekNum = searchParams.get("week");
   const subtopicNum = searchParams.get("subtopic");
+  const numQuestions = parseInt(searchParams.get("numQuestions")) || 5; // Mặc định 5 câu hỏi
+  
   if (!course || !weekNum || !subtopicNum) {
     navigate("/");
   }
@@ -149,11 +151,11 @@ const QuizPage = (props) => {
 
           setQuestions(jobData.result.questions);
           
-          // Lưu vào localStorage
+          // Lưu vào localStorage với key bao gồm số lượng câu hỏi
           const quizzes = JSON.parse(localStorage.getItem("quizzes")) || {};
+          const cacheKey = `${weekNum}_${subtopicNum}_${numQuestions}`;
           quizzes[course] = quizzes[course] || {};
-          quizzes[course][weekNum] = quizzes[course][weekNum] || {};
-          quizzes[course][weekNum][subtopicNum] = jobData.result.questions;
+          quizzes[course][cacheKey] = jobData.result.questions;
           localStorage.setItem("quizzes", JSON.stringify(quizzes));
           
           window.numQues = jobData.result.questions.length;
@@ -196,11 +198,11 @@ const QuizPage = (props) => {
     };
 
     await checkStatus();
-  }, [course, weekNum, subtopicNum]);
+  }, [course, weekNum, subtopicNum, numQuestions]);
 
   const fetchQuizWithPolling = useCallback(async () => {
     try {
-      console.log("Đang tạo quiz job...");
+      console.log("Đang tạo quiz job với", numQuestions, "câu hỏi...");
       axios.defaults.baseURL = API_CONFIG.baseURL;
 
       // Gọi API để tạo job
@@ -210,7 +212,13 @@ const QuizPage = (props) => {
         headers: {
           "Content-Type": "application/json",
         },
-        data: { course, topic, subtopic, description },
+        data: { 
+          course, 
+          topic, 
+          subtopic, 
+          description,
+          num_questions: numQuestions // Thêm số lượng câu hỏi
+        },
       });
 
       const { job_id, status, message } = response.data;
@@ -225,20 +233,24 @@ const QuizPage = (props) => {
       setLoading(false);
       alert("Đã xảy ra lỗi khi lấy bài kiểm tra. Vui lòng thử lại sau.");
     }
-  }, [course, topic, subtopic, description, pollQuizStatus]);
+  }, [course, topic, subtopic, description, numQuestions, pollQuizStatus]);
 
   useEffect(() => {
     console.log(course, topic, subtopic, description);
     if (!course || !topic || !subtopic || !description) return;
     
     const quizzes = JSON.parse(localStorage.getItem("quizzes")) || {};
+    
+    // Kiểm tra cache theo số lượng câu hỏi
+    const cacheKey = `${weekNum}_${subtopicNum}_${numQuestions}`;
+    
     if (
       quizzes[course] &&
-      quizzes[course][weekNum] &&
-      quizzes[course][weekNum][subtopicNum]
+      quizzes[course][cacheKey]
     ) {
-      setQuestions(quizzes[course][weekNum][subtopicNum]);
-      window.numQues = quizzes[course][weekNum][subtopicNum].length;
+      console.log("Tìm thấy quiz trong cache:", cacheKey);
+      setQuestions(quizzes[course][cacheKey]);
+      window.numQues = quizzes[course][cacheKey].length;
       setLoading(false);
       window.startTime = new Date().getTime();
       window.numAttmpt = 0;
@@ -249,7 +261,7 @@ const QuizPage = (props) => {
     // Nếu chưa có quiz trong cache, tạo mới với polling
     fetchQuizWithPolling();
     
-  }, [course, topic, subtopic, description, subtopicNum, weekNum, fetchQuizWithPolling]);
+  }, [course, topic, subtopic, description, subtopicNum, weekNum, numQuestions, fetchQuizWithPolling]);
 
   const SubmitButton = () => {
     return (

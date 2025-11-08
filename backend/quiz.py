@@ -23,9 +23,9 @@ client = OpenAI(
 job_storage = {}
 
 
-def get_quiz_sync(course, topic, subtopic, description):
+def get_quiz_sync(course, topic, subtopic, description, num_questions=5):
     """Hàm tạo quiz đồng bộ (blocking)"""
-    system_instruction = """Bạn là một trợ lý AI cung cấp bài kiểm tra để đánh giá sự hiểu biết của người dùng về một chủ đề. Bài kiểm tra sẽ dựa trên chủ đề, chủ đề con và mô tả của chủ đề con để xác định chính xác nội dung cần học. Xuất câu hỏi ở định dạng JSON. Các câu hỏi phải là câu hỏi trắc nghiệm, có thể bao gồm tính toán nếu cần thiết. Quyết định số lượng câu hỏi dựa trên mô tả của chủ đề con. Cố gắng tạo càng nhiều câu hỏi càng tốt. Bao gồm các câu hỏi yêu cầu suy nghĩ sâu sắc. xuất ở định dạng {questions:[ {question: "...", options:[...], answerIndex:"...", reason:"..."}]"""
+    system_instruction = f"""Bạn là một trợ lý AI cung cấp bài kiểm tra để đánh giá sự hiểu biết của người dùng về một chủ đề. Bài kiểm tra sẽ dựa trên chủ đề, chủ đề con và mô tả của chủ đề con để xác định chính xác nội dung cần học. Xuất câu hỏi ở định dạng JSON. Các câu hỏi phải là câu hỏi trắc nghiệm, có thể bao gồm tính toán nếu cần thiết. Tạo CHÍNH XÁC {num_questions} câu hỏi. Bao gồm các câu hỏi yêu cầu suy nghĩ sâu sắc. xuất ở định dạng {{questions:[ {{question: "...", options:[...], answerIndex:"...", reason:"..."}}]"""
 
     response = client.chat.completions.create(
         model=os.environ.get("OPENAI_MODEL", "gpt-5-nano-2025-08-07"),
@@ -36,7 +36,7 @@ def get_quiz_sync(course, topic, subtopic, description):
             },
             {
                 "role": "user",
-                "content": f'Người dùng đang học khóa học {course}. Trong khóa học, người dùng đang học chủ đề "{topic}". Tạo bài kiểm tra về chủ đề con "{subtopic}". Mô tả của chủ đề con là "{description}".'
+                "content": f'Người dùng đang học khóa học {course}. Trong khóa học, người dùng đang học chủ đề "{topic}". Tạo bài kiểm tra về chủ đề con "{subtopic}". Mô tả của chủ đề con là "{description}". Tạo CHÍNH XÁC {num_questions} câu hỏi.'
             }
         ]
     )
@@ -46,15 +46,15 @@ def get_quiz_sync(course, topic, subtopic, description):
     return json.loads(result)
 
 
-def process_quiz_job(job_id, course, topic, subtopic, description):
+def process_quiz_job(job_id, course, topic, subtopic, description, num_questions=5):
     """Xử lý job tạo quiz trong background thread"""
     try:
-        print(f"[Quiz Job {job_id}] Bắt đầu xử lý...")
+        print(f"[Quiz Job {job_id}] Bắt đầu xử lý với {num_questions} câu hỏi...")
         job_storage[job_id]['status'] = 'processing'
         job_storage[job_id]['updated_at'] = datetime.now().isoformat()
         
         # Tạo quiz
-        result = get_quiz_sync(course, topic, subtopic, description)
+        result = get_quiz_sync(course, topic, subtopic, description, num_questions)
         
         # Cập nhật kết quả
         job_storage[job_id]['status'] = 'completed'
@@ -71,7 +71,7 @@ def process_quiz_job(job_id, course, topic, subtopic, description):
         job_storage[job_id]['updated_at'] = datetime.now().isoformat()
 
 
-def get_quiz(course, topic, subtopic, description):
+def get_quiz(course, topic, subtopic, description, num_questions=5):
     """Tạo job và trả về job_id ngay lập tức"""
     job_id = str(uuid.uuid4())
     
@@ -83,6 +83,7 @@ def get_quiz(course, topic, subtopic, description):
         'topic': topic,
         'subtopic': subtopic,
         'description': description,
+        'num_questions': num_questions,
         'created_at': datetime.now().isoformat(),
         'updated_at': datetime.now().isoformat(),
         'result': None,
@@ -92,12 +93,12 @@ def get_quiz(course, topic, subtopic, description):
     # Chạy xử lý trong background thread
     thread = threading.Thread(
         target=process_quiz_job,
-        args=(job_id, course, topic, subtopic, description)
+        args=(job_id, course, topic, subtopic, description, num_questions)
     )
     thread.daemon = True
     thread.start()
     
-    print(f"[Quiz Job {job_id}] Đã tạo và bắt đầu background processing")
+    print(f"[Quiz Job {job_id}] Đã tạo và bắt đầu background processing với {num_questions} câu hỏi")
     
     return job_id
 

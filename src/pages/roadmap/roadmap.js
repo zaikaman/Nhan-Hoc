@@ -5,6 +5,7 @@ import "./roadmap.css";
 import Header from "../../components/header/header";
 import Loader from "../../components/loader/loader";
 import Modal from "../../components/modal/modal";
+import QuizConfigModal from "../../components/quizConfigModal/quizConfigModal";
 import API_CONFIG from "../../config/api";
 import {
   ChevronRight,
@@ -26,6 +27,8 @@ const RoadmapPage = (props) => {
   const [resources, setResources] = useState(null);
   const [resourceParam, setResourceParam] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
+  const [quizConfigModalOpen, setQuizConfigModalOpen] = useState(false);
+  const [currentQuizParams, setCurrentQuizParams] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const [roadmap, setRoadmap] = useState({});
@@ -155,9 +158,13 @@ const RoadmapPage = (props) => {
             <button
               className="quizButton"
               onClick={() => {
-                navigate(
-                  `/quiz?topic=${topic}&week=${weekNum}&subtopic=${number}`
-                );
+                setCurrentQuizParams({
+                  topic: topic,
+                  weekNum: weekNum,
+                  number: number,
+                  subtopicName: subtopic["chủ đề con"] || subtopic.subtopic
+                });
+                setQuizConfigModalOpen(true);
               }}
             >
               Bắt đầu kiểm tra
@@ -465,6 +472,23 @@ const RoadmapPage = (props) => {
           </>
         )}
       </Modal>
+      
+      <QuizConfigModal
+        open={quizConfigModalOpen}
+        onClose={() => {
+          setQuizConfigModalOpen(false);
+          setCurrentQuizParams(null);
+        }}
+        onStart={(soLuongCauHoi) => {
+          if (currentQuizParams) {
+            navigate(
+              `/quiz?topic=${currentQuizParams.topic}&week=${currentQuizParams.weekNum}&subtopic=${currentQuizParams.number}&numQuestions=${soLuongCauHoi}`
+            );
+          }
+        }}
+        subtopicName={currentQuizParams?.subtopicName || ""}
+      />
+      
       <Header></Header>
 
       <Loader style={{ display: loading ? "block" : "none" }}>

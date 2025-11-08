@@ -79,12 +79,13 @@ def get_quiz():
     topic = req.get("topic")
     subtopic = req.get("subtopic")
     description = req.get("description")
+    num_questions = req.get("num_questions", 5)  # Mặc định 5 câu hỏi
 
     if not (course and topic and subtopic and description):
         return {"error": "Thiếu thông tin bắt buộc"}, 400
 
-    print("Đang tạo quiz job...")
-    job_id = quiz.get_quiz(course, topic, subtopic, description)
+    print(f"Đang tạo quiz job với {num_questions} câu hỏi...")
+    job_id = quiz.get_quiz(course, topic, subtopic, description, num_questions)
     
     return {
         "job_id": job_id,

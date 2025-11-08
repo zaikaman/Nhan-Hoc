@@ -1,0 +1,220 @@
+.quiz-config-modal {
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.config-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: white;
+}
+
+.config-subtitle {
+  font-size: 1.1rem;
+  color: #B6B6B6;
+  margin-bottom: 2rem;
+  font-weight: 300;
+}
+
+.config-section {
+  margin-bottom: 2rem;
+}
+
+.config-label {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.input-with-buttons {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.adjust-btn {
+  width: 50px;
+  height: 50px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.adjust-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
+}
+
+.adjust-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.config-input {
+  width: 100px;
+  height: 60px;
+  font-size: 2rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.config-input:focus {
+  outline: none;
+  border-color: #4ED1B1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.config-input::-webkit-inner-spin-button,
+.config-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.config-hint {
+  font-size: 0.9rem;
+  color: #888;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+.quick-select {
+  margin-bottom: 2rem;
+}
+
+.quick-select-label {
+  font-size: 1rem;
+  color: #B6B6B6;
+  margin-bottom: 1rem;
+}
+
+.quick-select-buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.quick-btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.quick-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.quick-btn.active {
+  background: #4ED1B1;
+  border-color: #4ED1B1;
+  color: #000;
+}
+
+.config-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.btn-cancel,
+.btn-start {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  min-width: 150px;
+}
+
+.btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.btn-start {
+  background: linear-gradient(135deg, #4ED1B1 0%, #3BA890 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(78, 209, 177, 0.3);
+}
+
+.btn-start:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(78, 209, 177, 0.4);
+}
+
+.btn-start:active,
+.btn-cancel:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 600px) {
+  .quiz-config-modal {
+    padding: 1.5rem;
+  }
+
+  .config-title {
+    font-size: 1.5rem;
+  }
+
+  .config-subtitle {
+    font-size: 1rem;
+  }
+
+  .config-input {
+    width: 80px;
+    height: 50px;
+    font-size: 1.5rem;
+  }
+
+  .adjust-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+
+  .quick-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .btn-cancel,
+  .btn-start {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    min-width: 120px;
+  }
+}
