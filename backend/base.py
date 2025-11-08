@@ -423,6 +423,8 @@ import recommendations
 
 # ===== PERSONALIZED RECOMMENDATIONS ENDPOINTS =====
 import recommendations
+
+@api.route("/api/recommendations/personalized", methods=["POST", "OPTIONS"])
 def get_personalized_recommendations():
     """
     Tạo job recommendations và trả về job_id
