@@ -60,7 +60,6 @@ const PDFAnalysis = () => {
     formData.append('file', file);
 
     // Bắt đầu chạy progress bar giả
-    let fakeProgress = 0;
     const progressMessages = [
       { start: 0, end: 10, message: 'Đang đọc file PDF...' },
       { start: 10, end: 20, message: 'Đang trích xuất nội dung...' },
@@ -74,22 +73,25 @@ const PDFAnalysis = () => {
     ];
 
     const progressInterval = setInterval(() => {
-      fakeProgress += 1;
-      
-      // Tìm message phù hợp với progress hiện tại
-      const currentMessageObj = progressMessages.find(pm => fakeProgress >= pm.start && fakeProgress < pm.end);
-      
-      if (currentMessageObj) {
-        setProgressMessage(currentMessageObj.message);
-      }
-      
-      setProgress(fakeProgress);
-      
-      // Dừng ở 99%
-      if (fakeProgress >= 99) {
-        clearInterval(progressInterval);
-        setProgressMessage('Đang hoàn thiện...');
-      }
+      setProgress(prev => {
+        const newProgress = prev + 1;
+        
+        // Tìm message phù hợp với progress hiện tại
+        const currentMessageObj = progressMessages.find(pm => newProgress >= pm.start && newProgress < pm.end);
+        
+        if (currentMessageObj) {
+          setProgressMessage(currentMessageObj.message);
+        }
+        
+        // Dừng ở 99%
+        if (newProgress >= 99) {
+          clearInterval(progressInterval);
+          setProgressMessage('Đang hoàn thiện...');
+          return 99;
+        }
+        
+        return newProgress;
+      });
     }, 100); // Tăng 1% mỗi 100ms = 10 giây để đến 99%
 
     try {
