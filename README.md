@@ -67,7 +67,7 @@ Một nền tảng học tập ALL-IN-ONE với AI làm trung tâm, cung cấp:
 <summary><b>Xem chi tiết</b></summary>
 
 #### Mô tả
-Sử dụng GPT-4o để tạo lộ trình học tập chi tiết, được cấu trúc theo tuần, phù hợp với mục tiêu và trình độ của từng người học.
+Sử dụng GPT-5-Nano để tạo lộ trình học tập chi tiết, được cấu trúc theo tuần, phù hợp với mục tiêu và trình độ của từng người học.
 
 #### Đặc điểm nổi bật
 - 🎯 **Cá nhân hóa 100%**: Dựa trên tên chủ đề, mục tiêu, và thời gian học
@@ -124,7 +124,7 @@ Hệ thống quiz được AI tạo tự động với khả năng tùy chỉnh 
 - 📈 **Theo dõi tiến độ**: Xem lịch sử làm quiz, điểm trung bình
 
 #### Công nghệ
-- OpenAI GPT-4o với structured output
+- OpenAI GPT-5-Nano với structured output
 - React state management
 - Chart.js cho visualization
 - IndexedDB cho quiz history
@@ -148,7 +148,7 @@ AI tự động tạo tài liệu học tập dưới nhiều định dạng kh�
 - ✏️ **Chỉnh sửa linh hoạt**: Có thể edit và lưu lại tài liệu
 
 #### Công nghệ
-- OpenAI GPT-4o cho content generation
+- OpenAI GPT-5-Nano cho content generation
 - React Markdown cho rendering
 - File download API
 - IndexedDB storage
@@ -172,7 +172,7 @@ Phân tích toàn bộ dữ liệu học tập để đưa ra các gợi ý cá 
 - 🎓 **Phương pháp học**: Gợi ý kỹ thuật học tập hiệu quả
 
 #### Công nghệ
-- OpenAI GPT-4o với prompt engineering
+- OpenAI GPT-5-Nano với prompt engineering
 - Data analysis từ IndexedDB
 - Scoring algorithm
 
@@ -196,7 +196,7 @@ Trợ lý AI giọng nói cho phép tương tác bằng voice, hỗ trợ học 
 
 #### Công nghệ
 - VAPI.ai platform
-- GPT-4o Mini cho conversation
+- GPT-5-Nano cho conversation
 - PlayHT cho text-to-speech tiếng Việt
 - Deepgram Nova-2 cho speech-to-text
 - Transient Assistant pattern
@@ -221,7 +221,7 @@ Upload PDF và AI tự động trích xuất kiến thức, tạo flashcard và 
 
 #### Công nghệ
 - PyPDF2 cho PDF parsing
-- OpenAI GPT-4o cho content analysis
+- OpenAI GPT-5-Nano cho content analysis
 - ReportLab cho PDF generation
 - Python Threading
 - Frontend polling pattern
@@ -312,9 +312,9 @@ Dashboard trực quan hiển thị toàn bộ dữ liệu học tập và tiến
 
 | Service | Model | Sử dụng cho |
 |---------|-------|-------------|
-| **OpenAI** | GPT-4o | Roadmap, Resources, Analysis |
-| **OpenAI** | GPT-4o Mini | Chatbot, Quiz, Recommendations |
-| **VAPI** | GPT-4o Mini | Voice Assistant conversation |
+| **OpenAI** | GPT-5-Nano | Roadmap, Resources, Analysis |
+| **OpenAI** | GPT-5-Nano | Chatbot, Quiz, Recommendations |
+| **VAPI** | Gemini-2.5-Flash | Voice Assistant conversation |
 | **PlayHT** | Jennifer | Text-to-Speech (tiếng Việt) |
 | **Deepgram** | Nova-2 | Speech-to-Text (tiếng Việt) |
 
@@ -381,7 +381,7 @@ Dashboard trực quan hiển thị toàn bộ dữ liệu học tập và tiến
 1. **User Input** → React UI → IndexedDB (lưu local)
 2. **AI Request** → Flask API → Background Job → OpenAI API
 3. **Job Polling** → Frontend checks status mỗi 2s → Receive result
-4. **Voice Chat** → VAPI → GPT-4o + PlayHT + Deepgram → User
+4. **Voice Chat** → VAPI → GPT-5-Nano + PlayHT + Deepgram → User
 5. **Data Storage** → IndexedDB → Offline-first, sync on demand
 
 ### Background Jobs Pattern
@@ -1047,21 +1047,19 @@ SOFTWARE.
 
 ## 👥 Đội ngũ phát triển
 
-Dự án được phát triển bởi sinh viên **Đại học Sài Gòn (SGU)** cho **SGU Hackathon 2025**.
+Dự án được phát triển bởi sinh viên **Team Double2T** cho **SGU Hackathon 2025**.
 
 ### Core Team
 
-- **[Tên của bạn]** - *Project Lead & Full-stack Developer*
+- **[Đinh Phúc Thịnh]** - *Project Lead & Full-stack Developer*
   - 🌐 [GitHub](https://github.com/zaikaman)
-  - 📧 Email: your-email@example.com
-
-> *Thêm thành viên team khác nếu có*
+  - 📧 Email: zaikaman123@gmail.com
 
 ### Acknowledgments
 
 Chúng tôi xin gửi lời cảm ơn đến:
 
-- **OpenAI** - Cung cấp GPT-4o API
+- **OpenAI** - Cung cấp GPT-5-Nano API
 - **VAPI.ai** - Voice Assistant platform
 - **SGU** - Tổ chức hackathon và hỗ trợ
 - **Cộng đồng Open Source** - Libraries và tools tuyệt vời
