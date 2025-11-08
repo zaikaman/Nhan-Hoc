@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import "./modal.css";
-import { useEffect, useState } from "react";
+
 const Modal = ({ children, open = false, onClose }) => {
   return (
     <div className="flexbox modal" style={{ display: open ? "flex" : "none" }}>

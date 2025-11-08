@@ -24,6 +24,7 @@ const ResourcesPage = () => {
   useEffect(() => {
     loadResources();
     loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterTopic]);
 
   const loadResources = async () => {

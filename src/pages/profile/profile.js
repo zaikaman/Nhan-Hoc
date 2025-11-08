@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate, NavLink } from "react-router-dom";
 import "./profile.css";
 import Header from "../../components/header/header";
-import Loader from "../../components/loader/loader";
 import { ArrowRight, Plus } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -120,7 +118,7 @@ const ProfilePage = (props) => {
         },
       ],
     });
-  }, [stats]);
+  }, [stats, colors]);
   return (
     <div className="profile_wrapper">
       <Header></Header>

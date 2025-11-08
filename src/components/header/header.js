@@ -1,7 +1,6 @@
 import { NavLink } from "react-router-dom";
 import "./header.css";
 import { CircleUser, Home, Database } from "lucide-react";
-import { translateLocalStorage } from "../../translate/translate";
 
 const Header = () => {
   return (

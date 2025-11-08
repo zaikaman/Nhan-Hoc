@@ -24,7 +24,7 @@ const Question = ({ questionData, num, style }) => {
                 name={"ques" + (num + 1)}
                 id={"ques" + (num + 1) + "index" + index}
                 className={
-                  (index == questionData.answerIndex ? "correct" : "wrong") +
+                  (index === questionData.answerIndex ? "correct" : "wrong") +
                   " " +
                   (attempted ? "attempted" : "")
                 }
@@ -32,12 +32,12 @@ const Question = ({ questionData, num, style }) => {
                   if (attempted) {
                     e.preventDefault();
                   } else {
-                    if (window.numAttmpt == window.numQues - 1) {
+                    if (window.numAttmpt === window.numQues - 1) {
                       window.timeTaken =
                         new Date().getTime() - window.startTime;
                       console.log(window.timeTaken);
                     }
-                    if (index == questionData.answerIndex) {
+                    if (index === questionData.answerIndex) {
                       window.numCorrect++;
                     }
                     window.numAttmpt++;
@@ -53,7 +53,7 @@ const Question = ({ questionData, num, style }) => {
               <label htmlFor={"ques" + (num + 1) + "index" + index}>
                 {option}
               </label>
-              {index == questionData.answerIndex ? (
+              {index === questionData.answerIndex ? (
                 <CircleCheck
                   className="optionIcon"
                   size={35}
@@ -124,7 +124,7 @@ const QuizPage = (props) => {
     }
     setSubtopic(currentSubtopic["chủ đề con"] || currentSubtopic.subtopic);
     setDescription(currentSubtopic["mô tả"] || currentSubtopic.description);
-  }, [course, weekNum, subtopicNum]);
+  }, [course, navigate, weekNum, subtopicNum]);
 
   useEffect(() => {
     console.log(course, topic, subtopic, description);
@@ -175,7 +175,7 @@ const QuizPage = (props) => {
           );
         });
     }
-  }, [course, topic, subtopic, description]);
+  }, [course, topic, subtopic, description, subtopicNum, weekNum]);
 
   const SubmitButton = () => {
     return (

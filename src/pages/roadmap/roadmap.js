@@ -7,16 +7,12 @@ import Loader from "../../components/loader/loader";
 import Modal from "../../components/modal/modal";
 import API_CONFIG from "../../config/api";
 import {
-  CirclePlus,
-  ChevronDown,
   ChevronRight,
-  LoaderPinwheel,
   FolderSearch,
   Bot,
   Database,
   Trash2,
 } from "lucide-react";
-import { translateLocalStorage, translateObj } from "../../translate/translate";
 import Markdown from "react-markdown";
 import ConfettiExplosion from "react-confetti-explosion";
 import { 
@@ -71,6 +67,7 @@ const RoadmapPage = (props) => {
     }
     console.log(roadmap);
     console.log(topicDetails);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topic]);
 
   const colors = [
@@ -241,7 +238,8 @@ const RoadmapPage = (props) => {
       if (resourceParam.topic && resourceParam.subtopic) {
         checkCache();
       }
-    }, [resourceParam]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resourceParam.topic, resourceParam.subtopic]);
 
     const checkCache = async () => {
       try {
