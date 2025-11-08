@@ -1,14 +1,17 @@
 header {
   position: relative;
   margin-bottom: 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  height: 80px;
 }
 
 .logo-container {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-left: 2rem;
-  margin-top: 0.7rem;
 }
 
 .logo-text {
@@ -17,28 +20,39 @@ header {
   color: white;
 }
 
-header .ProfileAvatar {
-  display: none;
-  position: absolute;
-  right: 5ch;
-  top: 10px;
+/* Container cho các navigation icons */
+.nav-icons {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
 }
 
-header .Home {
-  position: absolute;
-  right: 5ch;
-  top: 20px;
+header .Home,
+header .Resources,
+header .ProfileAvatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  opacity: 0.8;
 }
+
+header .Home:hover,
+header .Resources:hover,
+header .ProfileAvatar:hover {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
 header h1 {
   font-size: 1.5rem;
   font-weight: 100;
-  margin-left: 2rem;
+  margin: 0;
 }
+
 header h1 .x {
   font-weight: 100;
-  /* font-style: italic; */
   font-size: 1.8rem;
   font-family: Inter, sans-serif;
 }
-
-/* Bỏ style cũ của .logo vì đã được xử lý trong .logo-container */

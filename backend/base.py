@@ -72,6 +72,7 @@ def get_roadmap_status(job_id):
 
 @api.route("/api/quiz", methods=["POST"])
 def get_quiz():
+    """Tạo job quiz và trả về job_id ngay lập tức"""
     req = request.get_json()
 
     course = req.get("course")
@@ -80,11 +81,40 @@ def get_quiz():
     description = req.get("description")
 
     if not (course and topic and subtopic and description):
-        return "Required Fields not provided", 400
+        return {"error": "Thiếu thông tin bắt buộc"}, 400
 
-    print("getting quiz...")
-    response_body = quiz.get_quiz(course, topic, subtopic, description)
-    return response_body
+    print("Đang tạo quiz job...")
+    job_id = quiz.get_quiz(course, topic, subtopic, description)
+    
+    return {
+        "job_id": job_id,
+        "status": "pending",
+        "message": "Đang tạo bài kiểm tra. Vui lòng đợi..."
+    }, 202
+
+
+@api.route("/api/quiz/status/<job_id>", methods=["GET"])
+def get_quiz_status(job_id):
+    """Kiểm tra trạng thái của quiz job"""
+    job = quiz.get_job_status(job_id)
+    
+    if job is None:
+        return {"error": "Không tìm thấy job"}, 404
+    
+    response = {
+        "job_id": job['job_id'],
+        "status": job['status'],
+        "created_at": job['created_at'],
+        "updated_at": job['updated_at']
+    }
+    
+    if job['status'] == 'completed':
+        response['result'] = job['result']
+        response['completed_at'] = job.get('completed_at')
+    elif job['status'] == 'failed':
+        response['error'] = job.get('error', 'Unknown error')
+    
+    return response, 200
 
 
 # @api.route("/api/translate", methods=["POST"])
@@ -101,6 +131,7 @@ def get_quiz():
 
 @api.route("/api/generate-resource", methods=["POST"])
 def generative_resource():
+    """Tạo job resource và trả về job_id ngay lập tức"""
     req = request.get_json()
     req_data = {
         "course": False,
@@ -111,7 +142,37 @@ def generative_resource():
     for key in req_data.keys():
         req_data[key] = req.get(key)
         if not req_data[key]:
-            return "Required Fields not provided", 400
-    print(f"generative resources for {req_data['course']}")
-    resources = generativeResources.generate_resources(**req_data)
-    return resources
+            return {"error": "Thiếu thông tin bắt buộc"}, 400
+    
+    print(f"Đang tạo resource job cho {req_data['course']}")
+    job_id = generativeResources.generate_resources(**req_data)
+    
+    return {
+        "job_id": job_id,
+        "status": "pending",
+        "message": "Đang tạo tài nguyên. Vui lòng đợi..."
+    }, 202
+
+
+@api.route("/api/generate-resource/status/<job_id>", methods=["GET"])
+def get_resource_status(job_id):
+    """Kiểm tra trạng thái của resource job"""
+    job = generativeResources.get_job_status(job_id)
+    
+    if job is None:
+        return {"error": "Không tìm thấy job"}, 404
+    
+    response = {
+        "job_id": job['job_id'],
+        "status": job['status'],
+        "created_at": job['created_at'],
+        "updated_at": job['updated_at']
+    }
+    
+    if job['status'] == 'completed':
+        response['result'] = job['result']
+        response['completed_at'] = job.get('completed_at')
+    elif job['status'] == 'failed':
+        response['error'] = job.get('error', 'Unknown error')
+    
+    return response, 200

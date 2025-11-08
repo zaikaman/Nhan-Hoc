@@ -89,6 +89,7 @@ const QuizPage = (props) => {
   const [topic, setTopic] = useState("");
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState("Đang tạo câu hỏi cá nhân hóa cho bạn...");
 
   const navigate = useNavigate();
 
@@ -129,6 +130,7 @@ const QuizPage = (props) => {
   useEffect(() => {
     console.log(course, topic, subtopic, description);
     if (!course || !topic || !subtopic || !description) return;
+    
     const quizzes = JSON.parse(localStorage.getItem("quizzes")) || {};
     if (
       quizzes[course] &&
@@ -141,40 +143,113 @@ const QuizPage = (props) => {
       window.startTime = new Date().getTime();
       window.numAttmpt = 0;
       window.numCorrect = 0;
-
       return;
-    } else {
-      console.log("fetching questions...");
+    }
+    
+    // Nếu chưa có quiz trong cache, tạo mới với polling
+    fetchQuizWithPolling();
+    
+  }, [course, topic, subtopic, description, subtopicNum, weekNum]);
+
+  const fetchQuizWithPolling = async () => {
+    try {
+      console.log("Đang tạo quiz job...");
       axios.defaults.baseURL = API_CONFIG.baseURL;
 
-      axios({
+      // Gọi API để tạo job
+      const response = await axios({
         method: "POST",
         url: "/api/quiz",
         headers: {
           "Content-Type": "application/json",
         },
         data: { course, topic, subtopic, description },
-      })
-        .then((res) => {
-          setQuestions(res.data.questions);
+      });
+
+      const { job_id, status, message } = response.data;
+      console.log(`[Quiz] Job đã tạo - ID: ${job_id}, Status: ${status}`);
+      console.log(`[Quiz] ${message}`);
+
+      // Polling để kiểm tra trạng thái
+      await pollQuizStatus(job_id);
+
+    } catch (error) {
+      console.error('Lỗi:', error);
+      setLoading(false);
+      alert("Đã xảy ra lỗi khi lấy bài kiểm tra. Vui lòng thử lại sau.");
+    }
+  };
+
+  const pollQuizStatus = async (jobId, maxAttempts = 120, interval = 2000) => {
+    let attempts = 0;
+
+    const checkStatus = async () => {
+      try {
+        attempts++;
+        const elapsedSeconds = (attempts * interval) / 1000;
+        console.log(`[Quiz Polling] Lần thử ${attempts}/${maxAttempts} - Job ID: ${jobId}`);
+        
+        // Cập nhật loading message
+        setLoadingMessage(`Đang tạo câu hỏi... (${elapsedSeconds.toFixed(0)}s)`);
+
+        const response = await axios.get(`/api/quiz/status/${jobId}`);
+        const jobData = response.data;
+
+        console.log(`[Quiz Polling] Trạng thái: ${jobData.status}`);
+
+        if (jobData.status === 'completed') {
+          console.log('[Quiz Polling] ✅ Hoàn thành!');
+
+          setQuestions(jobData.result.questions);
+          
+          // Lưu vào localStorage
+          const quizzes = JSON.parse(localStorage.getItem("quizzes")) || {};
           quizzes[course] = quizzes[course] || {};
           quizzes[course][weekNum] = quizzes[course][weekNum] || {};
-          quizzes[course][weekNum][subtopicNum] = res.data.questions;
+          quizzes[course][weekNum][subtopicNum] = jobData.result.questions;
           localStorage.setItem("quizzes", JSON.stringify(quizzes));
-          window.numQues = res.data.questions.length;
+          
+          window.numQues = jobData.result.questions.length;
           setLoading(false);
           window.startTime = new Date().getTime();
           window.numAttmpt = 0;
           window.numCorrect = 0;
-        })
-        .catch((error) => {
-          console.log(error);
-          alert(
-            "Đã xảy ra lỗi khi lấy bài kiểm tra. Vui lòng thử lại sau."
-          );
-        });
-    }
-  }, [course, topic, subtopic, description, subtopicNum, weekNum]);
+          
+          return true;
+        }
+        else if (jobData.status === 'failed') {
+          console.error('[Quiz Polling] ❌ Lỗi:', jobData.error);
+          setLoading(false);
+          alert(`Lỗi khi tạo bài kiểm tra: ${jobData.error || 'Unknown error'}`);
+          return true;
+        }
+        else if (attempts >= maxAttempts) {
+          console.error('[Quiz Polling] ⏱️ Timeout');
+          setLoading(false);
+          alert("Quá trình tạo bài kiểm tra mất quá nhiều thời gian. Vui lòng thử lại sau.");
+          return true;
+        }
+
+        // Tiếp tục polling
+        setTimeout(checkStatus, interval);
+        return false;
+
+      } catch (error) {
+        console.error('[Quiz Polling] Lỗi khi kiểm tra trạng thái:', error);
+
+        if (attempts >= maxAttempts) {
+          setLoading(false);
+          alert("Không thể kiểm tra trạng thái job. Vui lòng thử lại.");
+          return true;
+        }
+
+        setTimeout(checkStatus, interval);
+        return false;
+      }
+    };
+
+    await checkStatus();
+  };
 
   const SubmitButton = () => {
     return (
@@ -217,7 +292,7 @@ const QuizPage = (props) => {
     <div className="quiz_wrapper">
       <Header></Header>
       <Loader style={{ display: loading ? "block" : "none" }}>
-        Đang tạo câu hỏi cá nhân hóa cho bạn...
+        {loadingMessage}
       </Loader>
       <div className="content">
         <h1>{subtopic}</h1>

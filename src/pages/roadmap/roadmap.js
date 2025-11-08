@@ -302,7 +302,8 @@ const RoadmapPage = (props) => {
       axios.defaults.baseURL = API_CONFIG.baseURL;
 
       try {
-        const res = await axios({
+        // Gọi API để tạo job
+        const response = await axios({
           method: "POST",
           url: "/api/generate-resource",
           data: resourceParam,
@@ -311,41 +312,101 @@ const RoadmapPage = (props) => {
           },
         });
 
-        // Lưu vào IndexedDB
-        const resourceData = {
-          topic: resourceParam.course,
-          subtopic: resourceParam.subtopic,
-          description: resourceParam.description,
-          time: resourceParam.time,
-          knowledge_level: resourceParam.knowledge_level,
-          content: res.data,
-        };
+        const { job_id, status, message } = response.data;
+        console.log(`[Resource] Job đã tạo - ID: ${job_id}, Status: ${status}`);
+        console.log(`[Resource] ${message}`);
 
-        await saveResource(resourceData);
-        console.log('✅ Đã lưu resource vào IndexedDB');
+        // Polling để kiểm tra trạng thái
+        await pollResourceStatus(job_id);
 
-        setLoading(false);
-        setResources(
-          <div className="res">
-            <div className="res-header">
-              <h2 className="res-heading">{resourceParam.subtopic}</h2>
-              <span className="saved-badge">💾 Đã lưu vào bộ nhớ</span>
-            </div>
-            <Markdown>{res.data}</Markdown>
-          </div>
-        );
-        setHasCache(true);
-        
-        setTimeout(() => {
-          setConfettiExplode(true);
-          console.log("exploding confetti...");
-        }, 500);
       } catch (err) {
         setLoading(false);
         console.error('Lỗi:', err);
         alert("Lỗi khi tạo tài nguyên");
         navigate("/roadmap?topic=" + encodeURI(topic));
       }
+    };
+
+    // Hàm polling để kiểm tra trạng thái resource job
+    const pollResourceStatus = async (jobId, maxAttempts = 120, interval = 2000) => {
+      let attempts = 0;
+
+      const checkStatus = async () => {
+        try {
+          attempts++;
+          console.log(`[Resource Polling] Lần thử ${attempts}/${maxAttempts} - Job ID: ${jobId}`);
+
+          const response = await axios.get(`/api/generate-resource/status/${jobId}`);
+          const jobData = response.data;
+
+          console.log(`[Resource Polling] Trạng thái: ${jobData.status}`);
+
+          if (jobData.status === 'completed') {
+            console.log('[Resource Polling] ✅ Hoàn thành!');
+
+            // Lưu vào IndexedDB
+            const resourceData = {
+              topic: resourceParam.course,
+              subtopic: resourceParam.subtopic,
+              description: resourceParam.description,
+              time: resourceParam.time,
+              knowledge_level: resourceParam.knowledge_level,
+              content: jobData.result,
+            };
+
+            await saveResource(resourceData);
+            console.log('✅ Đã lưu resource vào IndexedDB');
+
+            setLoading(false);
+            setResources(
+              <div className="res">
+                <div className="res-header">
+                  <h2 className="res-heading">{resourceParam.subtopic}</h2>
+                  <span className="saved-badge">💾 Đã lưu vào bộ nhớ</span>
+                </div>
+                <Markdown>{jobData.result}</Markdown>
+              </div>
+            );
+            setHasCache(true);
+
+            setTimeout(() => {
+              setConfettiExplode(true);
+              console.log("exploding confetti...");
+            }, 500);
+            return true;
+          }
+          else if (jobData.status === 'failed') {
+            console.error('[Resource Polling] ❌ Lỗi:', jobData.error);
+            setLoading(false);
+            alert(`Lỗi khi tạo tài nguyên: ${jobData.error || 'Unknown error'}`);
+            return true;
+          }
+          else if (attempts >= maxAttempts) {
+            console.error('[Resource Polling] ⏱️ Timeout');
+            setLoading(false);
+            alert("Quá trình tạo tài nguyên mất quá nhiều thời gian. Vui lòng thử lại sau.");
+            return true;
+          }
+
+          // Tiếp tục polling
+          setTimeout(checkStatus, interval);
+          return false;
+
+        } catch (error) {
+          console.error('[Resource Polling] Lỗi khi kiểm tra trạng thái:', error);
+
+          if (attempts >= maxAttempts) {
+            setLoading(false);
+            alert("Không thể kiểm tra trạng thái job. Vui lòng thử lại.");
+            return true;
+          }
+
+          setTimeout(checkStatus, interval);
+          return false;
+        }
+      };
+
+      await checkStatus();
     };
 
     return (
