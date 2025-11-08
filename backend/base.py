@@ -15,11 +15,12 @@ CORS(api, resources={
     r"/api/*": {
         "origins": [
             "http://localhost:3000",
-            "https://*.vercel.app",
-            "https://*.herokuapp.com"
+            "https://nhan-hoc.vercel.app",
+            "https://nhanhoc-ca30a6361738.herokuapp.com"
         ],
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
     }
 })
 
