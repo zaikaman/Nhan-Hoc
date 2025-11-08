@@ -196,9 +196,8 @@ const TopicPage = (props) => {
               method: "POST",
               url: "/api/roadmap",
               data: data,
-              withCredentials: false,
               headers: {
-                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "application/json",
               },
             })
               .then((res) => {

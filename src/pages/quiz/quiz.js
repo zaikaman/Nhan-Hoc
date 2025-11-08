@@ -150,9 +150,8 @@ const QuizPage = (props) => {
       axios({
         method: "POST",
         url: "/api/quiz",
-        withCredentials: false,
         headers: {
-          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json",
         },
         data: { course, topic, subtopic, description },
       })

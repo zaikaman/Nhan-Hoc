@@ -306,9 +306,8 @@ const RoadmapPage = (props) => {
           method: "POST",
           url: "/api/generate-resource",
           data: resourceParam,
-          withCredentials: false,
           headers: {
-            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/json",
           },
         });
 

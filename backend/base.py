@@ -11,18 +11,16 @@ load_dotenv()
 api = Flask(__name__)
 
 # Cấu hình CORS cho production
-CORS(api, resources={
-    r"/api/*": {
-        "origins": [
-            "http://localhost:3000",
-            "https://nhan-hoc.vercel.app",
-            "https://nhanhoc-ca30a6361738.herokuapp.com"
-        ],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
-    }
-})
+CORS(api, 
+     origins=[
+         "http://localhost:3000",
+         "https://nhan-hoc.vercel.app",
+         "https://nhanhoc-ca30a6361738.herokuapp.com"
+     ],
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"],
+     supports_credentials=False
+)
 
 
 @api.route("/", methods=["GET"])

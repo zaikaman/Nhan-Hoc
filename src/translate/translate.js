@@ -9,9 +9,8 @@ function translate(text, toLang) {
       method: "POST",
       url: "/api/translate",
       data: { text, toLang },
-      withCredentials: false,
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
       },
     })
       .then((res) => {
