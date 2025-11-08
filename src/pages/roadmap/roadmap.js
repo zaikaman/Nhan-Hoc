@@ -42,7 +42,7 @@ const RoadmapPage = (props) => {
   const navigate = useNavigate();
   const topic = searchParams.get("topic");
   if (!topic) {
-    navigate("/");
+    window.location.href = "/";
   }
   useEffect(() => {
     const topics = JSON.parse(localStorage.getItem("topics")) || {};
@@ -66,7 +66,7 @@ const RoadmapPage = (props) => {
       !Object.keys(topics).includes(topic)
     ) {
       //   alert(`Roadmap for ${topic} not found. Please generate it first.`);
-      navigate("/");
+      window.location.href = "/";
     }
     console.log(roadmap);
     console.log(topicDetails);
@@ -319,7 +319,6 @@ const RoadmapPage = (props) => {
       setLoading(false);
       console.error('Lỗi:', err);
       alert("Lỗi khi tạo tài nguyên");
-      navigate("/roadmap?topic=" + encodeURI(topic));
     }
   };
 
@@ -495,7 +494,6 @@ const RoadmapPage = (props) => {
         setLoading(false);
         console.error('Lỗi:', err);
         alert("Lỗi khi tạo tài nguyên");
-        navigate("/roadmap?topic=" + encodeURI(topic));
       }
     };
 

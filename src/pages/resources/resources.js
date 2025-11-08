@@ -10,14 +10,13 @@ import {
   clearAllResources,
   getResourceStats,
 } from "../../utils/indexedDB";
-import { Trash2, Database, FolderOpen, TrendingUp } from "lucide-react";
+import { Trash2, Database, FolderOpen } from "lucide-react";
 import Markdown from "react-markdown";
 
 const ResourcesPage = () => {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedResource, setSelectedResource] = useState(null);
-  const [stats, setStats] = useState(null);
   const [filterTopic, setFilterTopic] = useState("all");
   const navigate = useNavigate();
 
@@ -46,8 +45,7 @@ const ResourcesPage = () => {
 
   const loadStats = async () => {
     try {
-      const statsData = await getResourceStats();
-      setStats(statsData);
+      await getResourceStats();
     } catch (error) {
       console.error("Lỗi khi tải thống kê:", error);
     }

@@ -47,7 +47,7 @@ const TopicPage = (props) => {
     return (
       <div className="flexbox suggestions">
         {list.map((item, i) => (
-          <button>
+          <button key={i}>
             <div
               className="suggestionPill"
               onClick={() => {

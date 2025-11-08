@@ -1,7 +1,7 @@
 // Utility để quản lý IndexedDB cho việc lưu trữ resources và user profile
 
 const DB_NAME = 'AILearningPlatformDB';
-const DB_VERSION = 3; // Tăng version để thêm chat store
+const DB_VERSION = 4; // Tăng version để thêm chat store
 const STORE_NAME = 'resources';
 const USER_STORE_NAME = 'userProfile';
 const CHAT_STORE_NAME = 'chatConversations';

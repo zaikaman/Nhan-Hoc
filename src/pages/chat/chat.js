@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import "./chat.css";
 import axios from "axios";
 import API_CONFIG from "../../config/api";
 import Header from "../../components/header/header";
 import {
-  saveChatConversation,
   getChatConversation,
   getAllChatConversations,
   updateChatConversation,
@@ -33,7 +31,6 @@ const ChatPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-  const navigate = useNavigate();
 
   // Load conversations khi component mount
   useEffect(() => {
