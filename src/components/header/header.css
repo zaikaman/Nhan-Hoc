@@ -47,7 +47,9 @@ header.chat-header-style {
 }
 
 header .ChatBot,
-header .Resources {
+header .Resources,
+header .Analytics,
+header .Recommendations {
   position: relative;
   display: flex;
   align-items: center;
@@ -57,14 +59,18 @@ header .Resources {
 }
 
 header .ChatBot:hover,
-header .Resources:hover {
+header .Resources:hover,
+header .Analytics:hover,
+header .Recommendations:hover {
   transform: scale(1.1);
   opacity: 1;
 }
 
 /* Active state cho navigation */
 header .ChatBot.active svg,
-header .Resources.active svg {
+header .Resources.active svg,
+header .Analytics.active svg,
+header .Recommendations.active svg {
   color: #667eea !important;
   opacity: 1;
 }

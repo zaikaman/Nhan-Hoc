@@ -323,3 +323,105 @@ def generate_study_plan():
     except Exception as e:
         print(f"Lỗi trong study plan: {str(e)}")
         return {"error": str(e)}, 500
+
+
+# ===== PERSONALIZED RECOMMENDATIONS ENDPOINTS =====
+import recommendations
+
+@api.route("/api/recommendations/personalized", methods=["POST", "OPTIONS"])
+def get_personalized_recommendations():
+    """
+    Lấy personalized recommendations toàn diện:
+    - Next topics to study (dựa trên performance)
+    - Learning path (lộ trình chi tiết)
+    - Difficulty adjustment (điều chỉnh độ khó)
+    """
+    if request.method == "OPTIONS":
+        return {}, 200
+    
+    try:
+        req = request.get_json()
+        learning_data = req.get("learning_data", {})
+        
+        # Lấy tất cả recommendations
+        result = recommendations.get_personalized_recommendations(learning_data)
+        
+        return {
+            "status": "success",
+            "data": result
+        }, 200
+        
+    except Exception as e:
+        print(f"Lỗi trong personalized recommendations: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
+
+
+@api.route("/api/recommendations/next-topics", methods=["POST", "OPTIONS"])
+def get_next_topics():
+    """Chỉ lấy next topics recommendations"""
+    if request.method == "OPTIONS":
+        return {}, 200
+    
+    try:
+        req = request.get_json()
+        learning_data = req.get("learning_data", {})
+        
+        performance = recommendations.analyze_performance(learning_data)
+        result = recommendations.recommend_next_topics(learning_data, performance)
+        
+        return {
+            "status": "success",
+            "data": result
+        }, 200
+        
+    except Exception as e:
+        print(f"Lỗi trong next topics: {str(e)}")
+        return {"error": str(e)}, 500
+
+
+@api.route("/api/recommendations/learning-path", methods=["POST", "OPTIONS"])
+def get_learning_path():
+    """Chỉ lấy learning path"""
+    if request.method == "OPTIONS":
+        return {}, 200
+    
+    try:
+        req = request.get_json()
+        learning_data = req.get("learning_data", {})
+        
+        performance = recommendations.analyze_performance(learning_data)
+        result = recommendations.generate_learning_path(learning_data, performance)
+        
+        return {
+            "status": "success",
+            "data": result
+        }, 200
+        
+    except Exception as e:
+        print(f"Lỗi trong learning path: {str(e)}")
+        return {"error": str(e)}, 500
+
+
+@api.route("/api/recommendations/difficulty", methods=["POST", "OPTIONS"])
+def get_difficulty_adjustment():
+    """Chỉ lấy difficulty adjustment"""
+    if request.method == "OPTIONS":
+        return {}, 200
+    
+    try:
+        req = request.get_json()
+        learning_data = req.get("learning_data", {})
+        
+        performance = recommendations.analyze_performance(learning_data)
+        result = recommendations.adjust_difficulty(learning_data, performance)
+        
+        return {
+            "status": "success",
+            "data": result
+        }, 200
+        
+    except Exception as e:
+        print(f"Lỗi trong difficulty adjustment: {str(e)}")
+        return {"error": str(e)}, 500

@@ -4,5 +4,6 @@ import TopicPage from "./input/topic";
 import ProfilePage from "./profile/profile";
 import ResourcesPage from "./resources/resources";
 import AnalyticsPage from "./analytics/analytics";
+import RecommendationsPage from "./recommendations/recommendations";
 
-export { QuizPage, RoadmapPage, TopicPage, ProfilePage, ResourcesPage, AnalyticsPage };
+export { QuizPage, RoadmapPage, TopicPage, ProfilePage, ResourcesPage, AnalyticsPage, RecommendationsPage };

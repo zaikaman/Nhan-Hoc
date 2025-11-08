@@ -2,7 +2,7 @@ import React from "react";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import { TopicPage, RoadmapPage, QuizPage, ProfilePage, ResourcesPage, AnalyticsPage } from "./pages/index";
+import { TopicPage, RoadmapPage, QuizPage, ProfilePage, ResourcesPage, AnalyticsPage, RecommendationsPage } from "./pages/index";
 import App from "./App";
 import AppWrapper from "./AppWrapper";
 import DebugDBPage from "./pages/debug/debugDB";
@@ -41,6 +41,10 @@ const router = createBrowserRouter([
   {
     path: "/analytics/",
     element: <AnalyticsPage />,
+  },
+  {
+    path: "/recommendations/",
+    element: <RecommendationsPage />,
   },
   {
     path: "/chat/",
