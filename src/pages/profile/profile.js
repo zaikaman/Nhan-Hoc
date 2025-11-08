@@ -124,7 +124,7 @@ const ProfilePage = (props) => {
       <Header></Header>
       <div className="flexbox content">
         <div className="flexbox info">
-          <img src="/avatar.jpg" alt="Avatar" className="avatar" />
+          <img src={`${process.env.PUBLIC_URL}/avatar.jpg`} alt="Avatar" className="avatar" />
           <div className="flexbox text">
             <h1>Hemant Kumar</h1>
             <h3>
