@@ -4,6 +4,8 @@ import ReactDOM from "react-dom/client";
 import "./index.css";
 import { TopicPage, RoadmapPage, QuizPage, ProfilePage, ResourcesPage } from "./pages/index";
 import App from "./App";
+import AppWrapper from "./AppWrapper";
+import DebugDBPage from "./pages/debug/debugDB";
 import reportWebVitals from "./reportWebVitals";
 
 const router = createBrowserRouter([
@@ -35,12 +37,18 @@ const router = createBrowserRouter([
     path: "/resources/",
     element: <ResourcesPage />,
   },
+  {
+    path: "/debug",
+    element: <DebugDBPage />,
+  },
 ]);
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <AppWrapper>
+      <RouterProvider router={router} />
+    </AppWrapper>
   </React.StrictMode>
 );
 

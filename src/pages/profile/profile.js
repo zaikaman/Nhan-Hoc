@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
 import "./profile.css";
 import Header from "../../components/header/header";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, Plus, User, Edit2, Check, X } from "lucide-react";
+import { getUserProfile, updateUsername } from "../../utils/indexedDB";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -91,6 +92,25 @@ const ProfilePage = (props) => {
   ], []);
   const [stats, setStats] = useState({});
   const [percentCompletedData, setPercentCompletedData] = useState({});
+  const [userProfile, setUserProfile] = useState(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempUsername, setTempUsername] = useState("");
+
+  // Load user profile
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const profile = await getUserProfile();
+        if (profile) {
+          setUserProfile(profile);
+          setTempUsername(profile.username);
+        }
+      } catch (error) {
+        console.error('Lỗi khi tải user profile:', error);
+      }
+    };
+    loadUserProfile();
+  }, []);
 
   useEffect(() => {
     const roadmaps = JSON.parse(localStorage.getItem("roadmaps")) || {};
@@ -119,14 +139,86 @@ const ProfilePage = (props) => {
       ],
     });
   }, [stats, colors]);
+
+  const handleEditName = () => {
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    if (tempUsername.trim().length < 2) {
+      alert('Tên người dùng phải có ít nhất 2 ký tự');
+      return;
+    }
+
+    if (tempUsername.trim().length > 30) {
+      alert('Tên người dùng không được quá 30 ký tự');
+      return;
+    }
+
+    try {
+      await updateUsername(tempUsername.trim());
+      const updatedProfile = await getUserProfile();
+      setUserProfile(updatedProfile);
+      setIsEditingName(false);
+    } catch (error) {
+      console.error('Lỗi khi cập nhật tên:', error);
+      alert('Có lỗi xảy ra khi cập nhật tên');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setTempUsername(userProfile?.username || '');
+    setIsEditingName(false);
+  };
+
   return (
     <div className="profile_wrapper">
       <Header></Header>
       <div className="flexbox content">
         <div className="flexbox info">
-          <img src={`${process.env.PUBLIC_URL}/avatar.jpg`} alt="Avatar" className="avatar" />
+          <div className="avatar-container">
+            <User size={80} strokeWidth={1.5} className="avatar-icon" />
+          </div>
           <div className="flexbox text">
-            <h1>Hemant Kumar</h1>
+            <div className="username-container">
+              {!isEditingName ? (
+                <>
+                  <h1>{userProfile?.username || 'Người dùng'}</h1>
+                  <button 
+                    className="edit-name-btn" 
+                    onClick={handleEditName}
+                    title="Chỉnh sửa tên"
+                  >
+                    <Edit2 size={20} />
+                  </button>
+                </>
+              ) : (
+                <div className="edit-name-group">
+                  <input
+                    type="text"
+                    value={tempUsername}
+                    onChange={(e) => setTempUsername(e.target.value)}
+                    className="edit-name-input"
+                    maxLength={30}
+                    autoFocus
+                  />
+                  <button 
+                    className="save-name-btn" 
+                    onClick={handleSaveName}
+                    title="Lưu"
+                  >
+                    <Check size={20} />
+                  </button>
+                  <button 
+                    className="cancel-name-btn" 
+                    onClick={handleCancelEdit}
+                    title="Hủy"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              )}
+            </div>
             <h3>
               Khóa học đang học: <b>{Object.keys(topics).length}</b>
             </h3>
