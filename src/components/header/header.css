@@ -2,6 +2,21 @@ header {
   position: relative;
   margin-bottom: 3rem;
 }
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: 2rem;
+  margin-top: 0.7rem;
+}
+
+.logo-text {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+}
+
 header .ProfileAvatar {
   display: none;
   position: absolute;
@@ -25,7 +40,5 @@ header h1 .x {
   font-size: 1.8rem;
   font-family: Inter, sans-serif;
 }
-.logo {
-  margin-left: 2rem;
-  margin-top: 0.7rem;
-}
+
+/* Bỏ style cũ của .logo vì đã được xử lý trong .logo-container */
