@@ -39,6 +39,7 @@ header {
   gap: 2rem;
 }
 
+header .ChatBot,
 header .Resources {
   position: relative;
   display: flex;
@@ -48,8 +49,16 @@ header .Resources {
   opacity: 0.8;
 }
 
+header .ChatBot:hover,
 header .Resources:hover {
   transform: scale(1.1);
+  opacity: 1;
+}
+
+/* Active state cho navigation */
+header .ChatBot.active svg,
+header .Resources.active svg {
+  color: #667eea !important;
   opacity: 1;
 }
 

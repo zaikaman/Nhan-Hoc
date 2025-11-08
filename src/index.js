@@ -6,6 +6,7 @@ import { TopicPage, RoadmapPage, QuizPage, ProfilePage, ResourcesPage } from "./
 import App from "./App";
 import AppWrapper from "./AppWrapper";
 import DebugDBPage from "./pages/debug/debugDB";
+import ChatPage from "./pages/chat/chat";
 import reportWebVitals from "./reportWebVitals";
 
 const router = createBrowserRouter([
@@ -36,6 +37,10 @@ const router = createBrowserRouter([
   {
     path: "/resources/",
     element: <ResourcesPage />,
+  },
+  {
+    path: "/chat/",
+    element: <ChatPage />,
   },
   {
     path: "/debug",

@@ -1,9 +1,10 @@
 // Utility để quản lý IndexedDB cho việc lưu trữ resources và user profile
 
 const DB_NAME = 'AILearningPlatformDB';
-const DB_VERSION = 2; // Tăng version để thêm store mới
+const DB_VERSION = 3; // Tăng version để thêm chat store
 const STORE_NAME = 'resources';
 const USER_STORE_NAME = 'userProfile';
+const CHAT_STORE_NAME = 'chatConversations';
 
 // Khởi tạo database
 const initDB = () => {
@@ -20,6 +21,32 @@ const initDB = () => {
       console.log('✅ Database đã mở thành công');
       const db = event.target.result;
       console.log('📊 Object stores có sẵn:', Array.from(db.objectStoreNames));
+      
+      // Kiểm tra xem có đủ stores không
+      const requiredStores = [STORE_NAME, USER_STORE_NAME, CHAT_STORE_NAME];
+      const missingStores = requiredStores.filter(store => !db.objectStoreNames.contains(store));
+      
+      if (missingStores.length > 0) {
+        console.warn('⚠️ Thiếu object stores:', missingStores);
+        console.log('🔄 Đang reset database để tạo lại...');
+        db.close();
+        
+        // Xóa database cũ
+        const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+        deleteRequest.onsuccess = () => {
+          console.log('✅ Đã xóa database cũ');
+          console.log('🔄 Đang tạo lại database...');
+          // Thử tạo lại
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        };
+        deleteRequest.onerror = () => {
+          reject('Không thể xóa database cũ. Vui lòng xóa thủ công trong DevTools.');
+        };
+        return;
+      }
+      
       resolve(db);
     };
 
@@ -48,6 +75,16 @@ const initDB = () => {
         userStore.createIndex('username', 'username', { unique: false });
       } else {
         console.log('✅ Object store đã tồn tại:', USER_STORE_NAME);
+      }
+
+      // Tạo object store cho chat conversations nếu chưa tồn tại
+      if (!db.objectStoreNames.contains(CHAT_STORE_NAME)) {
+        console.log('➕ Tạo object store:', CHAT_STORE_NAME);
+        const chatStore = db.createObjectStore(CHAT_STORE_NAME, { keyPath: 'id' });
+        chatStore.createIndex('timestamp', 'timestamp', { unique: false });
+        chatStore.createIndex('title', 'title', { unique: false });
+      } else {
+        console.log('✅ Object store đã tồn tại:', CHAT_STORE_NAME);
       }
       
       console.log('✅ Database upgrade hoàn tất');
@@ -515,3 +552,213 @@ export const updateUsername = async (newUsername) => {
   }
 };
 
+// ===== CHAT CONVERSATION FUNCTIONS =====
+
+// Lưu conversation mới
+export const saveChatConversation = async (conversationData) => {
+  try {
+    const db = await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([CHAT_STORE_NAME], 'readwrite');
+      const objectStore = transaction.objectStore(CHAT_STORE_NAME);
+      
+      const dataToSave = {
+        id: conversationData.id || `chat_${Date.now()}`,
+        title: conversationData.title || 'Cuộc trò chuyện mới',
+        messages: conversationData.messages || [],
+        timestamp: conversationData.timestamp || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      const request = objectStore.put(dataToSave);
+      
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      
+      request.onerror = () => {
+        reject('Lỗi khi lưu conversation');
+      };
+      
+      transaction.oncomplete = () => {
+        // Không đóng db để tránh conflict với các transaction khác
+        // IndexedDB sẽ tự quản lý connection
+      };
+    });
+  } catch (error) {
+    console.error('Lỗi khi lưu conversation:', error);
+    throw error;
+  }
+};
+
+// Lấy conversation theo ID
+export const getChatConversation = async (conversationId) => {
+  try {
+    const db = await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([CHAT_STORE_NAME], 'readonly');
+      const objectStore = transaction.objectStore(CHAT_STORE_NAME);
+      
+      const request = objectStore.get(conversationId);
+      
+      request.onsuccess = () => {
+        resolve(request.result || null);
+      };
+      
+      request.onerror = () => {
+        reject('Lỗi khi lấy conversation');
+      };
+      
+      transaction.oncomplete = () => {
+        // Không đóng db để tránh conflict với các transaction khác
+        // IndexedDB sẽ tự quản lý connection
+      };
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy conversation:', error);
+    throw error;
+  }
+};
+
+// Lấy tất cả conversations
+export const getAllChatConversations = async () => {
+  try {
+    const db = await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([CHAT_STORE_NAME], 'readonly');
+      const objectStore = transaction.objectStore(CHAT_STORE_NAME);
+      
+      const request = objectStore.getAll();
+      
+      request.onsuccess = () => {
+        // Sắp xếp theo updatedAt mới nhất
+        const conversations = request.result.sort((a, b) => 
+          new Date(b.updatedAt) - new Date(a.updatedAt)
+        );
+        resolve(conversations);
+      };
+      
+      request.onerror = () => {
+        reject('Lỗi khi lấy tất cả conversations');
+      };
+      
+      transaction.oncomplete = () => {
+        // Không đóng db để tránh conflict với các transaction khác
+        // IndexedDB sẽ tự quản lý connection
+      };
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy tất cả conversations:', error);
+    throw error;
+  }
+};
+
+// Xóa conversation
+export const deleteChatConversation = async (conversationId) => {
+  try {
+    const db = await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([CHAT_STORE_NAME], 'readwrite');
+      const objectStore = transaction.objectStore(CHAT_STORE_NAME);
+      
+      const request = objectStore.delete(conversationId);
+      
+      request.onsuccess = () => {
+        resolve(true);
+      };
+      
+      request.onerror = () => {
+        reject('Lỗi khi xóa conversation');
+      };
+      
+      transaction.oncomplete = () => {
+        // Không đóng db để tránh conflict với các transaction khác
+        // IndexedDB sẽ tự quản lý connection
+      };
+    });
+  } catch (error) {
+    console.error('Lỗi khi xóa conversation:', error);
+    throw error;
+  }
+};
+
+// Xóa tất cả conversations
+export const clearAllChatConversations = async () => {
+  try {
+    const db = await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([CHAT_STORE_NAME], 'readwrite');
+      const objectStore = transaction.objectStore(CHAT_STORE_NAME);
+      
+      const request = objectStore.clear();
+      
+      request.onsuccess = () => {
+        resolve(true);
+      };
+      
+      request.onerror = () => {
+        reject('Lỗi khi xóa tất cả conversations');
+      };
+      
+      transaction.oncomplete = () => {
+        // Không đóng db để tránh conflict với các transaction khác
+        // IndexedDB sẽ tự quản lý connection
+      };
+    });
+  } catch (error) {
+    console.error('Lỗi khi xóa tất cả conversations:', error);
+    throw error;
+  }
+};
+
+// Update conversation (thêm message mới)
+export const updateChatConversation = async (conversationId, newMessages) => {
+  try {
+    const conversation = await getChatConversation(conversationId);
+    
+    // Nếu conversation chưa tồn tại, tạo mới
+    if (!conversation) {
+      console.log('Conversation chưa tồn tại, tạo mới:', conversationId);
+      
+      let title = 'Cuộc trò chuyện mới';
+      if (newMessages.length > 0) {
+        const firstUserMessage = newMessages.find(msg => msg.role === 'user');
+        if (firstUserMessage) {
+          title = firstUserMessage.content.substring(0, 50) + (firstUserMessage.content.length > 50 ? '...' : '');
+        }
+      }
+      
+      return await saveChatConversation({
+        id: conversationId,
+        title,
+        messages: newMessages,
+        timestamp: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    
+    // Tạo title từ message đầu tiên nếu chưa có
+    let title = conversation.title;
+    if (title === 'Cuộc trò chuyện mới' && newMessages.length > 0) {
+      const firstUserMessage = newMessages.find(msg => msg.role === 'user');
+      if (firstUserMessage) {
+        title = firstUserMessage.content.substring(0, 50) + (firstUserMessage.content.length > 50 ? '...' : '');
+      }
+    }
+    
+    return await saveChatConversation({
+      ...conversation,
+      title,
+      messages: newMessages,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Lỗi khi cập nhật conversation:', error);
+    throw error;
+  }
+};

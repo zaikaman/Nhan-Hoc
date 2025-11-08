@@ -2,6 +2,7 @@ from flask import Flask, request
 import roadmap
 import quiz
 import generativeResources
+import chatbot
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
@@ -159,6 +160,60 @@ def generative_resource():
 def get_resource_status(job_id):
     """Kiểm tra trạng thái của resource job"""
     job = generativeResources.get_job_status(job_id)
+    
+    if job is None:
+        return {"error": "Không tìm thấy job"}, 404
+    
+    response = {
+        "job_id": job['job_id'],
+        "status": job['status'],
+        "created_at": job['created_at'],
+        "updated_at": job['updated_at']
+    }
+    
+    if job['status'] == 'completed':
+        response['result'] = job['result']
+        response['completed_at'] = job.get('completed_at')
+    elif job['status'] == 'failed':
+        response['error'] = job.get('error', 'Unknown error')
+    
+    return response, 200
+
+
+@api.route("/api/chat", methods=["POST", "OPTIONS"])
+def chat():
+    """Tạo chat job và trả về job_id ngay lập tức"""
+    # Xử lý OPTIONS request cho CORS preflight
+    if request.method == "OPTIONS":
+        return "", 200
+    
+    try:
+        req = request.get_json()
+        
+        messages = req.get("messages", [])
+        user_data = req.get("userData", {})
+        
+        if not messages:
+            return {"error": "Thiếu messages"}, 400
+        
+        # Tạo chat job
+        job_id = chatbot.chat_with_ai(messages, user_data)
+        
+        return {
+            "job_id": job_id,
+            "status": "pending",
+            "message": "Đang xử lý tin nhắn của bạn. Vui lòng đợi..."
+        }, 202
+        
+    except Exception as e:
+        print(f"Lỗi trong chat endpoint: {str(e)}")
+        return {"error": str(e)}, 500
+
+
+@api.route("/api/chat/status/<job_id>", methods=["GET"])
+def get_chat_status(job_id):
+    """Kiểm tra trạng thái của chat job"""
+    job = chatbot.get_chat_job_status(job_id)
     
     if job is None:
         return {"error": "Không tìm thấy job"}, 404
