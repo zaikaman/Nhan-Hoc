@@ -59,6 +59,39 @@ const PDFAnalysis = () => {
     const formData = new FormData();
     formData.append('file', file);
 
+    // Bắt đầu chạy progress bar giả
+    let fakeProgress = 0;
+    const progressMessages = [
+      { start: 0, end: 10, message: 'Đang đọc file PDF...' },
+      { start: 10, end: 20, message: 'Đang trích xuất nội dung...' },
+      { start: 20, end: 30, message: 'Đang gửi dữ liệu đến AI...' },
+      { start: 30, end: 45, message: 'Đang phân tích nội dung...' },
+      { start: 45, end: 60, message: 'AI đang xử lý tài liệu...' },
+      { start: 60, end: 70, message: 'Đang tạo cấu trúc flashcard...' },
+      { start: 70, end: 80, message: 'Đang phân tích thuật ngữ...' },
+      { start: 80, end: 90, message: 'Đang tạo câu hỏi tự đánh giá...' },
+      { start: 90, end: 99, message: 'Đang render PDF...' },
+    ];
+
+    const progressInterval = setInterval(() => {
+      fakeProgress += 1;
+      
+      // Tìm message phù hợp với progress hiện tại
+      const currentMessageObj = progressMessages.find(pm => fakeProgress >= pm.start && fakeProgress < pm.end);
+      
+      if (currentMessageObj) {
+        setProgressMessage(currentMessageObj.message);
+      }
+      
+      setProgress(fakeProgress);
+      
+      // Dừng ở 99%
+      if (fakeProgress >= 99) {
+        clearInterval(progressInterval);
+        setProgressMessage('Đang hoàn thiện...');
+      }
+    }, 100); // Tăng 1% mỗi 100ms = 10 giây để đến 99%
+
     try {
       const response = await fetch(`${API_CONFIG.baseURL}/api/analyze-pdf`, {
         method: 'POST',
@@ -66,6 +99,7 @@ const PDFAnalysis = () => {
       });
 
       if (!response.ok) {
+        clearInterval(progressInterval);
         const errorData = await response.json();
         throw new Error(errorData.error || 'Có lỗi xảy ra khi phân tích PDF');
       }
@@ -76,17 +110,18 @@ const PDFAnalysis = () => {
       console.log(`[PDF Analysis] ${message}`);
 
       // Polling để kiểm tra trạng thái
-      await pollPdfStatus(job_id);
+      await pollPdfStatus(job_id, progressInterval);
 
     } catch (err) {
       console.error('Error analyzing PDF:', err);
+      clearInterval(progressInterval);
       setError(err.message || 'Có lỗi xảy ra khi phân tích PDF');
       setIsAnalyzing(false);
     }
   };
 
   // Hàm polling để kiểm tra trạng thái PDF job
-  const pollPdfStatus = async (jobId, maxAttempts = 120, interval = 1000) => {
+  const pollPdfStatus = async (jobId, progressInterval, maxAttempts = 120, interval = 1000) => {
     let attempts = 0;
 
     const checkStatus = async () => {
@@ -101,18 +136,15 @@ const PDFAnalysis = () => {
         }
 
         const jobData = await response.json();
-        console.log(`[PDF Polling] Trạng thái: ${jobData.status}, Progress: ${jobData.progress}%`);
-
-        // Cập nhật progress từ backend
-        if (jobData.progress !== undefined) {
-          setProgress(jobData.progress);
-        }
-        if (jobData.progress_message) {
-          setProgressMessage(jobData.progress_message);
-        }
+        console.log(`[PDF Polling] Trạng thái: ${jobData.status}`);
 
         if (jobData.status === 'completed') {
           console.log('[PDF Polling] ✅ Hoàn thành!');
+
+          // Dừng progress giả và nhảy lên 100%
+          clearInterval(progressInterval);
+          setProgress(100);
+          setProgressMessage('Hoàn thành!');
 
           // Decode base64 PDF content
           const pdfBase64 = jobData.result.pdf_content;
@@ -127,14 +159,13 @@ const PDFAnalysis = () => {
           
           setResultPdfUrl(url);
           setAnalysisComplete(true);
-          setProgress(100);
-          setProgressMessage('Hoàn thành!');
           setIsAnalyzing(false);
           return true;
         }
         else if (jobData.status === 'failed') {
           console.error('[PDF Polling] ❌ Lỗi:', jobData.error);
           
+          clearInterval(progressInterval);
           setError(jobData.error || 'Có lỗi xảy ra khi phân tích PDF');
           setIsAnalyzing(false);
           return true;
@@ -142,6 +173,7 @@ const PDFAnalysis = () => {
         else if (attempts >= maxAttempts) {
           console.error('[PDF Polling] ⏱️ Timeout');
           
+          clearInterval(progressInterval);
           setError('Quá trình phân tích mất quá nhiều thời gian. Vui lòng thử lại sau.');
           setIsAnalyzing(false);
           return true;
@@ -155,6 +187,7 @@ const PDFAnalysis = () => {
         console.error('[PDF Polling] Lỗi khi kiểm tra trạng thái:', error);
 
         if (attempts >= maxAttempts) {
+          clearInterval(progressInterval);
           setError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối và thử lại.');
           setIsAnalyzing(false);
           return true;
