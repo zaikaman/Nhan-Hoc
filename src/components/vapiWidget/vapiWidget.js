@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Vapi from '@vapi-ai/web';
 import './vapiWidget.css';
-import { Mic, MicOff, Phone, PhoneOff, Loader as LoaderIcon } from 'lucide-react';
+import { Mic, Phone, PhoneOff, Loader as LoaderIcon } from 'lucide-react';
 import { useVapiContext } from '../../hooks/useVapiContext';
 
 const VapiWidget = () => {
@@ -218,15 +218,6 @@ PHONG CÁCH:
     if (!quizResults || quizResults.length === 0) return 'Chưa có';
     const latest = quizResults[0];
     return `${latest.topic}/${latest.subtopic} - ${latest.score}%`;
-  };
-
-  const formatTimeSpent = (timeSpent) => {
-    if (!timeSpent || Object.keys(timeSpent).length === 0) {
-      return '- Chưa có dữ liệu';
-    }
-    return Object.entries(timeSpent)
-      .map(([topic, minutes]) => `- ${topic}: ${Math.round(minutes)} phút`)
-      .join('\n');
   };
 
   return (
