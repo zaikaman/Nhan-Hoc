@@ -3,6 +3,7 @@ import "./chat.css";
 import axios from "axios";
 import API_CONFIG from "../../config/api";
 import Header from "../../components/header/header";
+import { usePageTracking } from "../../hooks/usePageTracking";
 import {
   getChatConversation,
   getAllChatConversations,
@@ -31,6 +32,15 @@ const ChatPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // 📊 TRACKING: Theo dõi thời gian sử dụng chat
+  usePageTracking(
+    'Chat AI',
+    'Trò chuyện với AI',
+    'chat_session',
+    60000, // Auto-save mỗi 60 giây
+    3 // Tối thiểu 3 giây
+  );
 
   // Load conversations khi component mount
   useEffect(() => {

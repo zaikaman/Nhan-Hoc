@@ -95,7 +95,8 @@ def calculate_progress_metrics(learning_data):
     
     return {
         'total_time_seconds': total_time,
-        'total_time_hours': round(total_time / 3600, 1),
+        'total_time_hours': round(total_time / 3600, 2),  # 2 chữ số thập phân để hiển thị chính xác hơn
+        'total_time_minutes': round(total_time / 60, 1),  # Thêm phút để dễ thấy
         'avg_quiz_score': round(avg_score, 1),
         'total_quizzes': total_quizzes,
         'passed_quizzes': passed_quizzes,

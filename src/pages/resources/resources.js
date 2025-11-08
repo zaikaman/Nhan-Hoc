@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./resources.css";
 import Header from "../../components/header/header";
 import Loader from "../../components/loader/loader";
+import { usePageTracking } from "../../hooks/usePageTracking";
 import {
   getAllResources,
   getResourcesByTopic,
@@ -19,43 +20,22 @@ const ResourcesPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedResource, setSelectedResource] = useState(null);
   const [filterTopic, setFilterTopic] = useState("all");
-  const [viewStartTime, setViewStartTime] = useState(null);
   const navigate = useNavigate();
+
+  // 📊 TRACKING: Theo dõi thời gian xem từng tài liệu
+  const resourceTracking = usePageTracking(
+    selectedResource?.topic || 'Resources',
+    selectedResource?.subtopic || 'Danh sách tài nguyên',
+    'view_resource',
+    30000, // Auto-save mỗi 30 giây
+    3 // Tối thiểu 3 giây
+  );
 
   useEffect(() => {
     loadResources();
     loadStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterTopic]);
-
-  // 📊 TRACKING: Theo dõi thời gian xem tài liệu
-  useEffect(() => {
-    if (selectedResource) {
-      // Bắt đầu đếm thời gian khi chọn resource
-      setViewStartTime(Date.now());
-      
-      return () => {
-        // Khi unmount hoặc chuyển sang resource khác, lưu thời gian đã xem
-        if (viewStartTime) {
-          const duration = Math.round((Date.now() - viewStartTime) / 1000); // seconds
-          
-          // Chỉ lưu nếu xem ít nhất 5 giây
-          if (duration >= 5) {
-            saveLearningActivity({
-              topic: selectedResource.topic,
-              subtopic: selectedResource.subtopic,
-              activityType: 'view_resource',
-              duration: duration,
-            }).then(() => {
-              console.log(`✅ Đã lưu ${duration}s xem tài liệu: ${selectedResource.subtopic}`);
-            }).catch(error => {
-              console.error('❌ Lỗi khi lưu analytics:', error);
-            });
-          }
-        }
-      };
-    }
-  }, [selectedResource, viewStartTime]);
 
   const loadResources = async () => {
     try {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import "./roadmap.css";
@@ -6,6 +6,7 @@ import Header from "../../components/header/header";
 import Loader from "../../components/loader/loader";
 import Modal from "../../components/modal/modal";
 import QuizConfigModal from "../../components/quizConfigModal/quizConfigModal";
+import { usePageTracking } from "../../hooks/usePageTracking";
 import API_CONFIG from "../../config/api";
 import {
   ChevronRight,
@@ -41,6 +42,16 @@ const RoadmapPage = (props) => {
   const [hasCache, setHasCache] = useState(false);
   const navigate = useNavigate();
   const topic = searchParams.get("topic");
+  
+  // 📊 TRACKING: Theo dõi thời gian xem roadmap
+  usePageTracking(
+    topic || 'Roadmap',
+    'Xem lộ trình học tập',
+    'view_roadmap',
+    60000, // Auto-save mỗi 60 giây
+    3 // Tối thiểu 3 giây
+  );
+  
   if (!topic) {
     window.location.href = "/";
   }

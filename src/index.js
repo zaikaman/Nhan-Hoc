@@ -6,6 +6,7 @@ import { TopicPage, RoadmapPage, QuizPage, ProfilePage, ResourcesPage, Analytics
 import App from "./App";
 import AppWrapper from "./AppWrapper";
 import DebugDBPage from "./pages/debug/debugDB";
+import TrackingDebugPage from "./pages/debug/trackingDebug";
 import ChatPage from "./pages/chat/chat";
 import PDFAnalysis from "./pages/pdfAnalysis/pdfAnalysis";
 import reportWebVitals from "./reportWebVitals";
@@ -58,6 +59,10 @@ const router = createBrowserRouter([
   {
     path: "/debug",
     element: <DebugDBPage />,
+  },
+  {
+    path: "/debug-tracking",
+    element: <TrackingDebugPage />,
   },
 ]);
 

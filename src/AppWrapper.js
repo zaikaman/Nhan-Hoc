@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { hasUserProfile, saveUserProfile } from './utils/indexedDB';
+import { usePendingActivities } from './hooks/usePageTracking';
 import WelcomeModal from './components/welcomeModal/welcomeModal';
 import Loader from './components/loader/loader';
 import VapiWidget from './components/vapiWidget/vapiWidget';
@@ -7,6 +8,9 @@ import VapiWidget from './components/vapiWidget/vapiWidget';
 const AppWrapper = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
+
+  // Xử lý pending activities từ localStorage
+  usePendingActivities();
 
   useEffect(() => {
     checkUserProfile();

@@ -171,10 +171,17 @@ const AnalyticsPage = () => {
     const { metrics, raw } = analyticsData;
 
     // Time spent by topic - từ topic_breakdown
-    const timeSpentData = Object.entries(metrics.topic_breakdown || {}).map(([topic, data]) => ({
-      topic: topic.length > 15 ? topic.substring(0, 15) + '...' : topic,
-      hours: parseFloat((data.time_spent / 3600).toFixed(1)), // Convert seconds to hours
-    }));
+    // Hiển thị phút nếu < 60 phút, giờ nếu >= 60 phút
+    const timeSpentData = Object.entries(metrics.topic_breakdown || {}).map(([topic, data]) => {
+      const minutes = data.time_spent / 60;
+      const hours = data.time_spent / 3600;
+      
+      return {
+        topic: topic.length > 15 ? topic.substring(0, 15) + '...' : topic,
+        value: hours >= 1 ? parseFloat(hours.toFixed(2)) : parseFloat(minutes.toFixed(1)),
+        unit: hours >= 1 ? 'giờ' : 'phút'
+      };
+    });
 
     // Quiz performance - từ raw quiz_results
     const quizPerformanceData = (raw.quiz_results || []).slice(-10).map((quiz, index) => ({
@@ -183,10 +190,10 @@ const AnalyticsPage = () => {
       topic: quiz.topic,
     }));
 
-    // Topics distribution
+    // Topics distribution - hiển thị phút
     const topicsData = Object.entries(metrics.topic_breakdown || {}).map(([topic, data]) => ({
       name: topic.length > 20 ? topic.substring(0, 20) + '...' : topic,
-      value: parseFloat((data.time_spent / 3600).toFixed(1)), // Hours
+      value: parseFloat((data.time_spent / 60).toFixed(1)), // Minutes
     }));
 
     return {
@@ -270,8 +277,16 @@ const AnalyticsPage = () => {
 
   // Backend trả về metrics trực tiếp, không có nested overview
   const metrics = analyticsData.metrics || {};
+  
+  // Hiển thị thời gian: Nếu < 1 giờ thì hiển thị phút, nếu >= 1 giờ thì hiển thị giờ
+  const totalMinutes = metrics.total_time_minutes || 0;
+  const totalHours = metrics.total_time_hours || 0;
+  const displayTime = totalHours >= 1 ? totalHours : totalMinutes;
+  const timeUnit = totalHours >= 1 ? 'giờ' : 'phút';
+  
   const overview = {
-    total_study_time_hours: metrics.total_time_hours || 0,
+    total_study_time: displayTime,
+    time_unit: timeUnit,
     average_quiz_score: metrics.avg_quiz_score || 0,
     total_quizzes: metrics.total_quizzes || 0,
     pass_rate: metrics.total_quizzes > 0 
@@ -297,8 +312,8 @@ const AnalyticsPage = () => {
             <h3>Tổng thời gian học</h3>
             <span className="stat-icon">⏱️</span>
           </div>
-          <div className="stat-value">{overview.total_study_time_hours}</div>
-          <div className="stat-label">giờ</div>
+          <div className="stat-value">{overview.total_study_time}</div>
+          <div className="stat-label">{overview.time_unit}</div>
         </div>
 
         <div className="stat-card" style={{'--gradient': 'linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)'}}>
@@ -378,7 +393,12 @@ const AnalyticsPage = () => {
                   <YAxis stroke="rgba(255, 255, 255, 0.6)" />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend />
-                  <Bar dataKey="hours" fill="url(#colorGradient)" name="Giờ học" radius={[8, 8, 0, 0]} />
+                  <Bar 
+                    dataKey="value" 
+                    fill="url(#colorGradient)" 
+                    name={chartData.timeSpent[0]?.unit || "phút"} 
+                    radius={[8, 8, 0, 0]} 
+                  />
                   <defs>
                     <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#667eea" />
