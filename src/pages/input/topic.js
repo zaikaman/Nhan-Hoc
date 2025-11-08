@@ -180,7 +180,7 @@ const TopicPage = (props) => {
     const navigate = useNavigate();
     
     // Hàm polling để kiểm tra trạng thái job
-    const pollJobStatus = async (jobId, maxAttempts = 120, interval = 2000) => {
+    const pollJobStatus = async (jobId, maxAttempts = 180, interval = 3000) => {
       let attempts = 0;
       
       const checkStatus = async () => {
@@ -192,7 +192,13 @@ const TopicPage = (props) => {
           // Cập nhật loading message
           setLoadingMessage(`Đang xử lý... (${elapsedSeconds.toFixed(0)}s)`);
           
-          const response = await axios.get(`/api/roadmap/status/${jobId}`);
+          // Gọi API với timeout 30 giây
+          const response = await axios.get(`/api/roadmap/status/${jobId}`, {
+            timeout: 30000, // 30 giây timeout cho mỗi request
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
           const jobData = response.data;
           
           console.log(`[Polling] Trạng thái: ${jobData.status}`);
@@ -216,14 +222,14 @@ const TopicPage = (props) => {
           else if (jobData.status === 'failed') {
             console.error('[Polling] ❌ Lỗi:', jobData.error);
             setLoading(false);
-            alert(`Lỗi khi tạo lộ trình: ${jobData.error || 'Unknown error'}`);
+            alert(`Lỗi khi tạo lộ trình: ${jobData.error || 'Lỗi không xác định'}`);
             navigate("/");
             return true;
           }
           else if (attempts >= maxAttempts) {
             console.error('[Polling] ⏱️ Timeout - Đã hết thời gian chờ');
             setLoading(false);
-            alert("Quá trình tạo lộ trình mất quá nhiều thời gian. Vui lòng thử lại sau.");
+            alert("Quá trình tạo lộ trình mất quá nhiều thời gian. Vui lòng thử lại sau hoặc kiểm tra kết nối mạng.");
             navigate("/");
             return true;
           }
@@ -235,9 +241,18 @@ const TopicPage = (props) => {
         } catch (error) {
           console.error('[Polling] Lỗi khi kiểm tra trạng thái:', error);
           
+          // Kiểm tra loại lỗi
+          if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+            console.error('[Polling] ⏱️ Request timeout');
+          } else if (error.response) {
+            console.error('[Polling] Server response error:', error.response.status);
+          } else if (error.request) {
+            console.error('[Polling] Network error - no response received');
+          }
+          
           if (attempts >= maxAttempts) {
             setLoading(false);
-            alert("Không thể kiểm tra trạng thái job. Vui lòng thử lại.");
+            alert("Không thể kết nối đến server. Vui lòng kiểm tra:\n1. Backend server đã chạy chưa?\n2. Kết nối mạng có ổn định không?\n3. CORS đã được cấu hình đúng chưa?");
             navigate("/");
             return true;
           }
@@ -277,7 +292,7 @@ const TopicPage = (props) => {
             
             axios.defaults.baseURL = API_CONFIG.baseURL;
             
-            // Gọi API để tạo job
+            // Gọi API để tạo job với timeout 30 giây
             const response = await axios({
               method: "POST",
               url: "/api/roadmap",
@@ -285,6 +300,7 @@ const TopicPage = (props) => {
               headers: {
                 "Content-Type": "application/json",
               },
+              timeout: 30000, // 30 giây timeout cho request tạo job
             });
             
             const { job_id, status, message } = response.data;
@@ -297,7 +313,18 @@ const TopicPage = (props) => {
           } catch (error) {
             console.error('[Submit] Lỗi:', error);
             setLoading(false);
-            alert("Đã xảy ra lỗi khi tạo lộ trình. Vui lòng thử lại sau.");
+            
+            // Xử lý lỗi chi tiết hơn
+            if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+              alert("Kết nối đến server bị timeout. Vui lòng kiểm tra:\n1. Backend server có đang chạy không?\n2. URL API có đúng không? (" + API_CONFIG.baseURL + ")");
+            } else if (error.response) {
+              alert(`Lỗi từ server: ${error.response.data?.error || error.response.statusText}`);
+            } else if (error.request) {
+              alert("Không thể kết nối đến server. Vui lòng kiểm tra:\n1. Backend đã chạy chưa?\n2. CORS configuration\n3. Network connection");
+            } else {
+              alert("Đã xảy ra lỗi: " + error.message);
+            }
+            
             navigate("/");
           }
         }}
