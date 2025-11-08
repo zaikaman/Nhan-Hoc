@@ -19,6 +19,7 @@ h2 {
 .TopicInput input {
   padding-left: 2ch;
   padding-right: 1.8ch;
+  font-family: Inter, sans-serif;
 }
 .TopicInput .icon {
   position: absolute;

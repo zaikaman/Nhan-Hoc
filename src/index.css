@@ -72,6 +72,7 @@ textarea {
   outline: none;
   color: white;
   border-bottom: 5px solid #5b5b67;
+  font-family: Inter, sans-serif;
 }
 option {
   background-color: #151627;
@@ -80,6 +81,7 @@ option {
 }
 ::placeholder {
   color: #73737d;
+  font-family: Inter, sans-serif;
 }
 button {
   cursor: pointer;

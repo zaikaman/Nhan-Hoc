@@ -20,17 +20,34 @@ const getStats = (roadmaps, quizStats) => {
   const stats = {};
   stats.progress = {};
   for (let topic in quizStats) {
+    // Kiểm tra nếu roadmap cho topic này tồn tại
+    if (!roadmaps[topic]) {
+      continue;
+    }
+    
     let numWeightage = 0;
     let completedWeightage = 0;
     Object.keys(roadmaps[topic]).forEach((week, i) => {
-      roadmaps[topic][week].subtopics.forEach((subtopic, j) => {
-        numWeightage += parseInt(subtopic.time.replace(/^\D+/g, ""));
+      // Hỗ trợ cả tiếng Việt và tiếng Anh
+      const subtopics = roadmaps[topic][week]["các chủ đề con"] || roadmaps[topic][week].subtopics;
+      
+      // Kiểm tra nếu subtopics tồn tại và là mảng
+      if (!subtopics || !Array.isArray(subtopics)) {
+        return;
+      }
+      
+      subtopics.forEach((subtopic, j) => {
+        // Hỗ trợ cả tiếng Việt và tiếng Anh cho trường time
+        const timeStr = subtopic["thời gian"] || subtopic.time || "0";
+        const timeValue = parseInt(timeStr.replace(/^\D+/g, "")) || 0;
+        
+        numWeightage += timeValue;
         if (
           quizStats[topic] &&
           quizStats[topic][i + 1] &&
           quizStats[topic][i + 1][j + 1]
         ) {
-          completedWeightage += parseInt(subtopic.time.replace(/^\D+/g, ""));
+          completedWeightage += timeValue;
         }
       });
     });

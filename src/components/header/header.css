@@ -23,7 +23,7 @@ header h1 .x {
   font-weight: 100;
   /* font-style: italic; */
   font-size: 1.8rem;
-  font-family: "Times New Roman", Times, serif;
+  font-family: Inter, sans-serif;
 }
 .logo {
   margin-left: 2rem;
