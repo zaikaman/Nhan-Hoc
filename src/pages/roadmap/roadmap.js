@@ -84,7 +84,6 @@ const RoadmapPage = (props) => {
   ];
 
   const Subtopic = ({ subtopic, number, style, weekNum, quizStats }) => {
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const topic = searchParams.get("topic");
     return (
