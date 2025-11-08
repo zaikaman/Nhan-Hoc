@@ -1,11 +1,14 @@
 """
 Module xử lý phân tích học tập (Learning Analytics) với AI
+Background jobs support
 """
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
 import json
 from datetime import datetime, timedelta
+import uuid
+import threading
 
 load_dotenv()
 
@@ -16,6 +19,9 @@ client = OpenAI(
 )
 
 MODEL = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
+
+# Lưu trữ trạng thái các job trong bộ nhớ
+analytics_job_storage = {}
 
 
 def calculate_progress_metrics(learning_data):
@@ -367,3 +373,73 @@ Insights: {json.dumps(insights, ensure_ascii=False, indent=2)}"""
             "priority_topics": insights.get('next_focus', 'Tiếp tục học') if 'insights' in locals() else 'Bất kỳ topic nào',
             "tips": ["Học đều đặn mỗi ngày", "Ôn lại những phần còn yếu"]
         }
+
+
+def process_analytics_insights_job(job_id, learning_data):
+    """Xử lý analytics insights job trong background thread"""
+    try:
+        print(f"[Analytics Job {job_id}] Bắt đầu xử lý...")
+        analytics_job_storage[job_id]['status'] = 'processing'
+        analytics_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
+        
+        # Gọi hàm phân tích
+        result = analyze_learning_patterns(learning_data)
+        
+        # Cập nhật kết quả
+        analytics_job_storage[job_id]['status'] = 'completed'
+        analytics_job_storage[job_id]['result'] = result
+        analytics_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
+        analytics_job_storage[job_id]['completed_at'] = datetime.now().isoformat()
+        
+        print(f"[Analytics Job {job_id}] Hoàn thành!")
+        
+    except Exception as e:
+        print(f"[Analytics Job {job_id}] Lỗi: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        analytics_job_storage[job_id]['status'] = 'failed'
+        analytics_job_storage[job_id]['error'] = str(e)
+        analytics_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
+
+
+def create_analytics_insights_job(learning_data):
+    """
+    Tạo analytics insights job và trả về job_id ngay lập tức
+    
+    Args:
+        learning_data: Dict chứa learning data
+    
+    Returns:
+        String job_id
+    """
+    job_id = str(uuid.uuid4())
+    
+    # Khởi tạo job
+    analytics_job_storage[job_id] = {
+        'job_id': job_id,
+        'status': 'pending',
+        'learning_data': learning_data,
+        'created_at': datetime.now().isoformat(),
+        'updated_at': datetime.now().isoformat(),
+        'result': None,
+        'error': None
+    }
+    
+    # Chạy xử lý trong background thread
+    thread = threading.Thread(
+        target=process_analytics_insights_job,
+        args=(job_id, learning_data)
+    )
+    thread.daemon = True
+    thread.start()
+    
+    print(f"[Analytics Job {job_id}] Đã tạo và bắt đầu background processing")
+    
+    return job_id
+
+
+def get_analytics_job_status(job_id):
+    """Lấy trạng thái của analytics job"""
+    if job_id not in analytics_job_storage:
+        return None
+    return analytics_job_storage[job_id]

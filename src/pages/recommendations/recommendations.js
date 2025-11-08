@@ -50,7 +50,7 @@ const RecommendationsPage = () => {
         return;
       }
 
-      // Gọi API để lấy personalized recommendations
+      // Gọi API để tạo recommendations job
       const response = await fetch(`${API_CONFIG.baseURL}/api/recommendations/personalized`, {
         method: 'POST',
         headers: {
@@ -60,23 +60,84 @@ const RecommendationsPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Không thể tải recommendations');
+        throw new Error('Không thể tạo recommendations job');
       }
 
       const result = await response.json();
-      console.log('✅ Recommendations:', result.data);
+      const { job_id } = result;
+      console.log(`[Recommendations] Job đã tạo - ID: ${job_id}`);
 
-      setRecommendations(result.data.recommendations);
-      setLearningPath(result.data.learning_path);
-      setNextTopics(result.data.next_topics);
-      setDifficultyAdjustment(result.data.difficulty_adjustment);
+      // Polling để kiểm tra trạng thái
+      await pollRecommendationsStatus(job_id);
 
     } catch (err) {
       console.error('❌ Lỗi khi load recommendations:', err);
       setError(err.message);
-    } finally {
       setLoading(false);
     }
+  };
+
+  // Hàm polling để kiểm tra trạng thái recommendations job
+  const pollRecommendationsStatus = async (jobId, maxAttempts = 60, interval = 2000) => {
+    let attempts = 0;
+
+    const checkStatus = async () => {
+      try {
+        attempts++;
+        console.log(`[Recommendations Polling] Lần thử ${attempts}/${maxAttempts} - Job ID: ${jobId}`);
+
+        const response = await fetch(`${API_CONFIG.baseURL}/api/recommendations/personalized/status/${jobId}`);
+        
+        if (!response.ok) {
+          throw new Error('Không thể kiểm tra trạng thái job');
+        }
+
+        const jobData = await response.json();
+        console.log(`[Recommendations Polling] Trạng thái: ${jobData.status}`);
+
+        if (jobData.status === 'completed') {
+          console.log('[Recommendations Polling] ✅ Hoàn thành!');
+
+          const result = jobData.result;
+          setRecommendations(result.recommendations);
+          setLearningPath(result.learning_path);
+          setNextTopics(result.next_topics);
+          setDifficultyAdjustment(result.difficulty_adjustment);
+          setLoading(false);
+          return true;
+        }
+        else if (jobData.status === 'failed') {
+          console.error('[Recommendations Polling] ❌ Lỗi:', jobData.error);
+          setError(jobData.error || 'Có lỗi xảy ra khi tạo recommendations');
+          setLoading(false);
+          return true;
+        }
+        else if (attempts >= maxAttempts) {
+          console.error('[Recommendations Polling] ⏱️ Timeout');
+          setError('Quá trình xử lý mất quá nhiều thời gian. Vui lòng thử lại sau.');
+          setLoading(false);
+          return true;
+        }
+
+        // Tiếp tục polling
+        setTimeout(checkStatus, interval);
+        return false;
+
+      } catch (error) {
+        console.error('[Recommendations Polling] Lỗi khi kiểm tra trạng thái:', error);
+
+        if (attempts >= maxAttempts) {
+          setError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối và thử lại.');
+          setLoading(false);
+          return true;
+        }
+
+        setTimeout(checkStatus, interval);
+        return false;
+      }
+    };
+
+    await checkStatus();
   };
 
   const getPriorityIcon = (priority) => {

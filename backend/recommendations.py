@@ -1,7 +1,7 @@
 """
 Module xử lý Personalized Recommendations với AI
 Gợi ý chủ đề tiếp theo, learning path, và điều chỉnh độ khó dựa trên performance
-Tối ưu với parallel processing để giảm thời gian response
+Tối ưu với parallel processing và background jobs
 """
 from openai import OpenAI
 import os
@@ -10,6 +10,8 @@ import json
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import uuid
+import threading
 
 load_dotenv()
 
@@ -23,6 +25,9 @@ MODEL = os.getenv('OPENAI_MODEL', 'gpt-5-nano-2025-08-07')
 
 # ThreadPoolExecutor để chạy parallel AI requests
 executor = ThreadPoolExecutor(max_workers=3)
+
+# Lưu trữ trạng thái các job trong bộ nhớ
+recommendations_job_storage = {}
 
 
 def analyze_performance(learning_data):
@@ -427,3 +432,73 @@ def get_personalized_recommendations(learning_data):
         'performance': performance,
         'processing_time': round(elapsed_time, 2)
     }
+
+
+def process_recommendations_job(job_id, learning_data):
+    """Xử lý recommendations job trong background thread"""
+    try:
+        print(f"[Recommendations Job {job_id}] Bắt đầu xử lý...")
+        recommendations_job_storage[job_id]['status'] = 'processing'
+        recommendations_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
+        
+        # Gọi hàm xử lý recommendations
+        result = get_personalized_recommendations(learning_data)
+        
+        # Cập nhật kết quả
+        recommendations_job_storage[job_id]['status'] = 'completed'
+        recommendations_job_storage[job_id]['result'] = result
+        recommendations_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
+        recommendations_job_storage[job_id]['completed_at'] = datetime.now().isoformat()
+        
+        print(f"[Recommendations Job {job_id}] Hoàn thành!")
+        
+    except Exception as e:
+        print(f"[Recommendations Job {job_id}] Lỗi: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        recommendations_job_storage[job_id]['status'] = 'failed'
+        recommendations_job_storage[job_id]['error'] = str(e)
+        recommendations_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
+
+
+def create_recommendations_job(learning_data):
+    """
+    Tạo recommendations job và trả về job_id ngay lập tức
+    
+    Args:
+        learning_data: Dict chứa learning data
+    
+    Returns:
+        String job_id
+    """
+    job_id = str(uuid.uuid4())
+    
+    # Khởi tạo job
+    recommendations_job_storage[job_id] = {
+        'job_id': job_id,
+        'status': 'pending',
+        'learning_data': learning_data,
+        'created_at': datetime.now().isoformat(),
+        'updated_at': datetime.now().isoformat(),
+        'result': None,
+        'error': None
+    }
+    
+    # Chạy xử lý trong background thread
+    thread = threading.Thread(
+        target=process_recommendations_job,
+        args=(job_id, learning_data)
+    )
+    thread.daemon = True
+    thread.start()
+    
+    print(f"[Recommendations Job {job_id}] Đã tạo và bắt đầu background processing")
+    
+    return job_id
+
+
+def get_recommendations_job_status(job_id):
+    """Lấy trạng thái của recommendations job"""
+    if job_id not in recommendations_job_storage:
+        return None
+    return recommendations_job_storage[job_id]

@@ -83,6 +83,7 @@ const AnalyticsPage = () => {
     try {
       setInsightsLoading(true);
 
+      // Gọi API để tạo insights job
       const insightsResponse = await fetch(`${API_CONFIG.baseURL}/api/analytics/insights`, {
         method: 'POST',
         headers: {
@@ -92,17 +93,75 @@ const AnalyticsPage = () => {
       });
 
       if (!insightsResponse.ok) {
-        throw new Error('Không thể tải AI insights');
+        throw new Error('Không thể tạo AI insights job');
       }
 
       const insightsResult = await insightsResponse.json();
-      setInsights(insightsResult.data);
+      const { job_id } = insightsResult;
+      console.log(`[Analytics Insights] Job đã tạo - ID: ${job_id}`);
+
+      // Polling để kiểm tra trạng thái
+      await pollInsightsStatus(job_id);
 
     } catch (err) {
       console.error('Lỗi khi load insights:', err);
-    } finally {
       setInsightsLoading(false);
     }
+  };
+
+  // Hàm polling để kiểm tra trạng thái insights job
+  const pollInsightsStatus = async (jobId, maxAttempts = 60, interval = 2000) => {
+    let attempts = 0;
+
+    const checkStatus = async () => {
+      try {
+        attempts++;
+        console.log(`[Insights Polling] Lần thử ${attempts}/${maxAttempts} - Job ID: ${jobId}`);
+
+        const response = await fetch(`${API_CONFIG.baseURL}/api/analytics/insights/status/${jobId}`);
+        
+        if (!response.ok) {
+          throw new Error('Không thể kiểm tra trạng thái job');
+        }
+
+        const jobData = await response.json();
+        console.log(`[Insights Polling] Trạng thái: ${jobData.status}`);
+
+        if (jobData.status === 'completed') {
+          console.log('[Insights Polling] ✅ Hoàn thành!');
+          setInsights(jobData.result);
+          setInsightsLoading(false);
+          return true;
+        }
+        else if (jobData.status === 'failed') {
+          console.error('[Insights Polling] ❌ Lỗi:', jobData.error);
+          setInsightsLoading(false);
+          return true;
+        }
+        else if (attempts >= maxAttempts) {
+          console.error('[Insights Polling] ⏱️ Timeout');
+          setInsightsLoading(false);
+          return true;
+        }
+
+        // Tiếp tục polling
+        setTimeout(checkStatus, interval);
+        return false;
+
+      } catch (error) {
+        console.error('[Insights Polling] Lỗi khi kiểm tra trạng thái:', error);
+
+        if (attempts >= maxAttempts) {
+          setInsightsLoading(false);
+          return true;
+        }
+
+        setTimeout(checkStatus, interval);
+        return false;
+      }
+    };
+
+    await checkStatus();
   };
 
   // Chuẩn bị dữ liệu cho charts

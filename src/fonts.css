@@ -1,0 +1,20 @@
+/* UVF Aphrodite Pro Font */
+@font-face {
+  font-family: 'UVF Aphrodite Pro';
+  src: url('%PUBLIC_URL%/fonts/UVFAphroditePro.woff2') format('woff2'),
+       url('%PUBLIC_URL%/fonts/UVFAphroditePro.woff') format('woff'),
+       url('%PUBLIC_URL%/fonts/UVFAphroditePro.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'UVF Aphrodite Pro';
+  src: url('%PUBLIC_URL%/fonts/UVFAphroditePro-Bold.woff2') format('woff2'),
+       url('%PUBLIC_URL%/fonts/UVFAphroditePro-Bold.woff') format('woff'),
+       url('%PUBLIC_URL%/fonts/UVFAphroditePro-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}

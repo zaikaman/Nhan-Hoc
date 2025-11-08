@@ -37,6 +37,8 @@ header.chat-header-style {
   font-size: 1.5rem;
   font-weight: 600;
   color: white;
+  font-family: 'UVF Aphrodite Pro', sans-serif;
+  letter-spacing: 0.05em;
 }
 
 /* Container cho các navigation icons */

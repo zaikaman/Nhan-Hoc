@@ -239,7 +239,7 @@ import analytics
 
 @api.route("/api/analytics/overview", methods=["POST", "OPTIONS"])
 def get_analytics_overview():
-    """Tính toán metrics tổng quan từ dữ liệu học tập"""
+    """Tính toán metrics tổng quan từ dữ liệu học tập (đồng bộ - nhanh)"""
     if request.method == "OPTIONS":
         return {}, 200
     
@@ -261,7 +261,7 @@ def get_analytics_overview():
 
 @api.route("/api/analytics/insights", methods=["POST", "OPTIONS"])
 def get_analytics_insights():
-    """Phân tích patterns và tạo AI insights"""
+    """Tạo job phân tích AI insights và trả về job_id"""
     if request.method == "OPTIONS":
         return {}, 200
     
@@ -269,16 +269,42 @@ def get_analytics_insights():
         req = request.get_json()
         learning_data = req.get("learning_data", {})
         
-        insights = analytics.analyze_learning_patterns(learning_data)
+        # Tạo background job
+        job_id = analytics.create_analytics_insights_job(learning_data)
         
         return {
-            "status": "success",
-            "data": insights
-        }, 200
+            "job_id": job_id,
+            "status": "pending",
+            "message": "Đang phân tích learning patterns. Vui lòng đợi..."
+        }, 202
         
     except Exception as e:
         print(f"Lỗi trong analytics insights: {str(e)}")
         return {"error": str(e)}, 500
+
+
+@api.route("/api/analytics/insights/status/<job_id>", methods=["GET"])
+def get_analytics_insights_status(job_id):
+    """Kiểm tra trạng thái của analytics insights job"""
+    job = analytics.get_analytics_job_status(job_id)
+    
+    if job is None:
+        return {"error": "Không tìm thấy job"}, 404
+    
+    response = {
+        "job_id": job['job_id'],
+        "status": job['status'],
+        "created_at": job['created_at'],
+        "updated_at": job['updated_at']
+    }
+    
+    if job['status'] == 'completed':
+        response['result'] = job['result']
+        response['completed_at'] = job.get('completed_at')
+    elif job['status'] == 'failed':
+        response['error'] = job.get('error', 'Unknown error')
+    
+    return response, 200
 
 
 @api.route("/api/analytics/topic/<topic_name>", methods=["POST", "OPTIONS"])
@@ -334,7 +360,7 @@ import recommendations
 @api.route("/api/recommendations/personalized", methods=["POST", "OPTIONS"])
 def get_personalized_recommendations():
     """
-    Lấy personalized recommendations toàn diện:
+    Tạo job recommendations và trả về job_id
     - Next topics to study (dựa trên performance)
     - Learning path (lộ trình chi tiết)
     - Difficulty adjustment (điều chỉnh độ khó)
@@ -346,19 +372,44 @@ def get_personalized_recommendations():
         req = request.get_json()
         learning_data = req.get("learning_data", {})
         
-        # Lấy tất cả recommendations
-        result = recommendations.get_personalized_recommendations(learning_data)
+        # Tạo background job
+        job_id = recommendations.create_recommendations_job(learning_data)
         
         return {
-            "status": "success",
-            "data": result
-        }, 200
+            "job_id": job_id,
+            "status": "pending",
+            "message": "Đang phân tích và tạo recommendations. Vui lòng đợi..."
+        }, 202
         
     except Exception as e:
         print(f"Lỗi trong personalized recommendations: {str(e)}")
         import traceback
         traceback.print_exc()
         return {"error": str(e)}, 500
+
+
+@api.route("/api/recommendations/personalized/status/<job_id>", methods=["GET"])
+def get_personalized_recommendations_status(job_id):
+    """Kiểm tra trạng thái của recommendations job"""
+    job = recommendations.get_recommendations_job_status(job_id)
+    
+    if job is None:
+        return {"error": "Không tìm thấy job"}, 404
+    
+    response = {
+        "job_id": job['job_id'],
+        "status": job['status'],
+        "created_at": job['created_at'],
+        "updated_at": job['updated_at']
+    }
+    
+    if job['status'] == 'completed':
+        response['result'] = job['result']
+        response['completed_at'] = job.get('completed_at')
+    elif job['status'] == 'failed':
+        response['error'] = job.get('error', 'Unknown error')
+    
+    return response, 200
 
 
 @api.route("/api/recommendations/next-topics", methods=["POST", "OPTIONS"])
