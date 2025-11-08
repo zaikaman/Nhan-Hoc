@@ -354,10 +354,49 @@ def generate_study_plan():
 # ===== PDF ANALYSIS ENDPOINTS =====
 import pdfAnalysis
 
-# ===== PERSONALIZED RECOMMENDATIONS ENDPOINTS =====
+@api.route("/api/analyze-pdf", methods=["POST", "OPTIONS"])
+def analyze_pdf():
+    """Tạo PDF analysis job và trả về job_id ngay lập tức"""
+    if request.method == "OPTIONS":
+        return {}, 200
+    
+    try:
+        result = pdfAnalysis.phân_tích_pdf()
+        return result
+        
+    except Exception as e:
+        print(f"Lỗi trong PDF analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
+
+
+@api.route("/api/analyze-pdf/status/<job_id>", methods=["GET"])
+def get_pdf_analysis_status(job_id):
+    """Kiểm tra trạng thái của PDF analysis job"""
+    job = pdfAnalysis.get_pdf_job_status(job_id)
+    
+    if job is None:
+        return {"error": "Không tìm thấy job"}, 404
+    
+    response = {
+        "job_id": job['job_id'],
+        "status": job['status'],
+        "created_at": job['created_at'],
+        "updated_at": job['updated_at']
+    }
+    
+    if job['status'] == 'completed':
+        response['result'] = job['result']
+        response['completed_at'] = job.get('completed_at')
+    elif job['status'] == 'failed':
+        response['error'] = job.get('error', 'Unknown error')
+    
+    return response, 200
 import recommendations
 
-@api.route("/api/recommendations/personalized", methods=["POST", "OPTIONS"])
+# ===== PERSONALIZED RECOMMENDATIONS ENDPOINTS =====
+import recommendations
 def get_personalized_recommendations():
     """
     Tạo job recommendations và trả về job_id
@@ -478,22 +517,5 @@ def get_difficulty_adjustment():
         
     except Exception as e:
         print(f"Lỗi trong difficulty adjustment: {str(e)}")
-        return {"error": str(e)}, 500
-
-
-@api.route("/api/analyze-pdf", methods=["POST", "OPTIONS"])
-def analyze_pdf():
-    """Phân tích PDF và tạo flashcard học tập"""
-    if request.method == "OPTIONS":
-        return {}, 200
-    
-    try:
-        result = pdfAnalysis.phân_tích_pdf()
-        return result
-        
-    except Exception as e:
-        print(f"Lỗi trong PDF analysis: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return {"error": str(e)}, 500
 

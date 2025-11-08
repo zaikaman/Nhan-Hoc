@@ -81,20 +81,94 @@ const PDFAnalysis = () => {
         throw new Error(errorData.error || 'Có lỗi xảy ra khi phân tích PDF');
       }
 
-      // Nhận PDF blob
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      
-      setResultPdfUrl(url);
-      setAnalysisComplete(true);
-      setProgress(100);
+      // Nhận job_id từ response
+      const { job_id, status, message } = await response.json();
+      console.log(`[PDF Analysis] Job đã tạo - ID: ${job_id}, Status: ${status}`);
+      console.log(`[PDF Analysis] ${message}`);
+
+      // Polling để kiểm tra trạng thái
+      await pollPdfStatus(job_id);
+
     } catch (err) {
       console.error('Error analyzing PDF:', err);
       setError(err.message || 'Có lỗi xảy ra khi phân tích PDF');
       clearInterval(progressInterval);
-    } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  // Hàm polling để kiểm tra trạng thái PDF job
+  const pollPdfStatus = async (jobId, maxAttempts = 120, interval = 2000) => {
+    let attempts = 0;
+
+    const checkStatus = async () => {
+      try {
+        attempts++;
+        console.log(`[PDF Polling] Lần thử ${attempts}/${maxAttempts} - Job ID: ${jobId}`);
+
+        const response = await fetch(`${API_CONFIG.baseURL}/api/analyze-pdf/status/${jobId}`);
+        
+        if (!response.ok) {
+          throw new Error('Không thể kiểm tra trạng thái');
+        }
+
+        const jobData = await response.json();
+        console.log(`[PDF Polling] Trạng thái: ${jobData.status}`);
+
+        if (jobData.status === 'completed') {
+          console.log('[PDF Polling] ✅ Hoàn thành!');
+
+          // Decode base64 PDF content
+          const pdfBase64 = jobData.result.pdf_content;
+          const pdfBinary = atob(pdfBase64);
+          const pdfArray = new Uint8Array(pdfBinary.length);
+          for (let i = 0; i < pdfBinary.length; i++) {
+            pdfArray[i] = pdfBinary.charCodeAt(i);
+          }
+          
+          const blob = new Blob([pdfArray], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          
+          setResultPdfUrl(url);
+          setAnalysisComplete(true);
+          setProgress(100);
+          setIsAnalyzing(false);
+          return true;
+        }
+        else if (jobData.status === 'failed') {
+          console.error('[PDF Polling] ❌ Lỗi:', jobData.error);
+          
+          setError(jobData.error || 'Có lỗi xảy ra khi phân tích PDF');
+          setIsAnalyzing(false);
+          return true;
+        }
+        else if (attempts >= maxAttempts) {
+          console.error('[PDF Polling] ⏱️ Timeout');
+          
+          setError('Quá trình phân tích mất quá nhiều thời gian. Vui lòng thử lại sau.');
+          setIsAnalyzing(false);
+          return true;
+        }
+
+        // Tiếp tục polling
+        setTimeout(checkStatus, interval);
+        return false;
+
+      } catch (error) {
+        console.error('[PDF Polling] Lỗi khi kiểm tra trạng thái:', error);
+
+        if (attempts >= maxAttempts) {
+          setError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối và thử lại.');
+          setIsAnalyzing(false);
+          return true;
+        }
+
+        setTimeout(checkStatus, interval);
+        return false;
+      }
+    };
+
+    await checkStatus();
   };
 
   const downloadResult = () => {

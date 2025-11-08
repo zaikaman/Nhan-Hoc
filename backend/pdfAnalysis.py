@@ -4,6 +4,10 @@ import json
 import tempfile
 import io
 import PyPDF2
+import uuid
+import threading
+import base64
+from datetime import datetime
 from openai import OpenAI
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -20,6 +24,9 @@ load_dotenv()
 # Cấu hình API
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 client = OpenAI(api_key=OPENAI_API_KEY)
+
+# Lưu trữ trạng thái các job trong bộ nhớ
+pdf_job_storage = {}
 
 def trích_xuất_text_từ_pdf(pdf_path):
     """Trích xuất nội dung text từ file PDF"""
@@ -732,8 +739,80 @@ def tạo_pdf_flashcard(analysis, output_path):
         traceback.print_exc()
         raise
 
+def xử_lý_pdf_đồng_bộ(pdf_path, filename):
+    """Xử lý phân tích PDF đồng bộ - trả về PDF content"""
+    try:
+        # Bước 1: Trích xuất text từ PDF
+        print("Đang trích xuất text từ PDF...")
+        text = trích_xuất_text_từ_pdf(pdf_path)
+        
+        if len(text.strip()) < 100:
+            raise Exception('PDF có vẻ rỗng hoặc không đọc được')
+        
+        # Bước 2: Phân tích với AI
+        print("Đang phân tích nội dung với AI...")
+        analysis = phân_tích_với_ai(text)
+        
+        # Bước 3: Tạo PDF output
+        print("Đang tạo PDF flashcard...")
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
+            output_path = temp_output.name
+        
+        tạo_pdf_flashcard(analysis, output_path)
+        
+        # Đọc file PDF đã tạo
+        with open(output_path, 'rb') as f:
+            pdf_content = f.read()
+        
+        # Cleanup
+        os.unlink(output_path)
+        
+        return pdf_content
+        
+    except Exception as e:
+        print(f"Lỗi trong xử lý PDF: {str(e)}")
+        raise e
+
+def process_pdf_job(job_id, pdf_path, filename):
+    """Xử lý PDF job trong background thread"""
+    try:
+        print(f"[PDF Job {job_id}] Bắt đầu xử lý...")
+        pdf_job_storage[job_id]['status'] = 'processing'
+        pdf_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
+        
+        # Xử lý PDF
+        pdf_content = xử_lý_pdf_đồng_bộ(pdf_path, filename)
+        
+        # Encode PDF content thành base64 để lưu trữ
+        pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
+        
+        # Cập nhật kết quả
+        pdf_job_storage[job_id]['status'] = 'completed'
+        pdf_job_storage[job_id]['result'] = {
+            'pdf_content': pdf_base64,
+            'filename': f'phan_tich_{filename}'
+        }
+        pdf_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
+        pdf_job_storage[job_id]['completed_at'] = datetime.now().isoformat()
+        
+        print(f"[PDF Job {job_id}] Hoàn thành!")
+        
+    except Exception as e:
+        print(f"[PDF Job {job_id}] Lỗi: {str(e)}")
+        pdf_job_storage[job_id]['status'] = 'failed'
+        pdf_job_storage[job_id]['error'] = str(e)
+        pdf_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
+    
+    finally:
+        # Cleanup PDF file
+        try:
+            if os.path.exists(pdf_path):
+                os.unlink(pdf_path)
+        except:
+            pass
+
 def phân_tích_pdf():
-    """Xử lý phân tích PDF (được gọi từ base.py)"""
+    """Tạo PDF job và trả về job_id ngay lập tức"""
     try:
         if 'file' not in request.files:
             return {'error': 'Không có file được upload'}, 400
@@ -751,49 +830,44 @@ def phân_tích_pdf():
             file.save(temp_pdf.name)
             pdf_path = temp_pdf.name
         
-        try:
-            # Bước 1: Trích xuất text từ PDF
-            print("Đang trích xuất text từ PDF...")
-            text = trích_xuất_text_từ_pdf(pdf_path)
-            
-            if len(text.strip()) < 100:
-                return {'error': 'PDF có vẻ rỗng hoặc không đọc được'}, 400
-            
-            # Bước 2: Phân tích với AI
-            print("Đang phân tích nội dung với AI...")
-            analysis = phân_tích_với_ai(text)
-            
-            # Bước 3: Tạo PDF output
-            print("Đang tạo PDF flashcard...")
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
-                output_path = temp_output.name
-            
-            tạo_pdf_flashcard(analysis, output_path)
-            
-            # Đọc file PDF đã tạo
-            with open(output_path, 'rb') as f:
-                pdf_content = f.read()
-            
-            # Cleanup
-            os.unlink(pdf_path)
-            os.unlink(output_path)
-            
-            # Trả về file PDF
-            return send_file(
-                io.BytesIO(pdf_content),
-                mimetype='application/pdf',
-                as_attachment=True,
-                download_name=f'phan_tich_{file.filename}'
-            )
-            
-        except Exception as e:
-            # Cleanup on error
-            if os.path.exists(pdf_path):
-                os.unlink(pdf_path)
-            raise e
-            
+        # Tạo job ID
+        job_id = str(uuid.uuid4())
+        
+        # Khởi tạo job
+        pdf_job_storage[job_id] = {
+            'job_id': job_id,
+            'status': 'pending',
+            'filename': file.filename,
+            'created_at': datetime.now().isoformat(),
+            'updated_at': datetime.now().isoformat(),
+            'result': None,
+            'error': None
+        }
+        
+        # Chạy xử lý trong background thread
+        thread = threading.Thread(
+            target=process_pdf_job,
+            args=(job_id, pdf_path, file.filename)
+        )
+        thread.daemon = True
+        thread.start()
+        
+        print(f"[PDF Job {job_id}] Đã tạo và bắt đầu background processing")
+        
+        return {
+            'job_id': job_id,
+            'status': 'pending',
+            'message': 'Đang phân tích PDF của bạn. Vui lòng đợi...'
+        }, 202
+        
     except Exception as e:
         print(f"Lỗi: {str(e)}")
         import traceback
         traceback.print_exc()
         return {'error': str(e)}, 500
+
+def get_pdf_job_status(job_id):
+    """Lấy trạng thái của PDF job"""
+    if job_id not in pdf_job_storage:
+        return None
+    return pdf_job_storage[job_id]
