@@ -1,5 +1,6 @@
 from flask import request, send_file
 import os
+import sys
 import json
 import tempfile
 import io
@@ -7,6 +8,8 @@ import PyPDF2
 import uuid
 import threading
 import base64
+import time
+import random
 from datetime import datetime
 from openai import OpenAI
 from reportlab.lib.pagesizes import letter
@@ -19,6 +22,15 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from dotenv import load_dotenv
 
+# Đảm bảo encoding UTF-8 cho Python
+if sys.platform.startswith('win'):
+    # Thiết lập encoding mặc định cho Windows
+    import locale
+    if sys.stdout.encoding != 'utf-8':
+        sys.stdout.reconfigure(encoding='utf-8')
+    if sys.stderr.encoding != 'utf-8':
+        sys.stderr.reconfigure(encoding='utf-8')
+
 load_dotenv()
 
 # Cấu hình API
@@ -27,6 +39,37 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Lưu trữ trạng thái các job trong bộ nhớ
 pdf_job_storage = {}
+
+def update_progress(job_id, progress, message=""):
+    """Cập nhật progress của job"""
+    if job_id in pdf_job_storage:
+        pdf_job_storage[job_id]['progress'] = progress
+        pdf_job_storage[job_id]['progress_message'] = message
+        pdf_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
+
+def simulate_progress(job_id, start, end, duration, message=""):
+    """Chạy progress bar giả từ start đến end trong khoảng thời gian duration (seconds)"""
+    steps = end - start
+    interval = duration / steps
+    
+    for i in range(steps):
+        current_progress = start + i
+        update_progress(job_id, current_progress, message)
+        time.sleep(interval)
+
+def ensure_utf8(text):
+    """Đảm bảo text là UTF-8 string"""
+    if isinstance(text, bytes):
+        return text.decode('utf-8', errors='replace')
+    elif isinstance(text, str):
+        return text
+    else:
+        return str(text)
+
+def create_paragraph(text, style):
+    """Tạo Paragraph với text UTF-8 an toàn"""
+    safe_text = ensure_utf8(text)
+    return Paragraph(safe_text, style)
 
 def trích_xuất_text_từ_pdf(pdf_path):
     """Trích xuất nội dung text từ file PDF"""
@@ -41,7 +84,7 @@ def trích_xuất_text_từ_pdf(pdf_path):
                 page = pdf_reader.pages[page_num]
                 text += page.extract_text() + "\n\n"
             
-            print(f"✓ Đã trích xuất text từ {num_pages} trang")
+            print(f"[OK] Đã trích xuất text từ {num_pages} trang")
     except Exception as e:
         print(f"Lỗi khi trích xuất PDF: {str(e)}")
         raise
@@ -51,6 +94,10 @@ def trích_xuất_text_từ_pdf(pdf_path):
 def phân_tích_với_ai(text):
     """Sử dụng OpenAI để phân tích tài liệu học thuật và tạo insights có cấu trúc"""
     try:
+        # Đảm bảo text là UTF-8
+        if isinstance(text, bytes):
+            text = text.decode('utf-8', errors='replace')
+        
         # Ví dụ JSON mẫu
         example_json = """{
     "tieu_de": "Ứng dụng Machine Learning trong Chẩn đoán Y tế",
@@ -160,7 +207,7 @@ HƯỚNG DẪN QUAN TRỌNG:
 Bây giờ hãy phân tích tài liệu học thuật ở trên và cung cấp phản hồi của bạn theo CHÍNH XÁC định dạng JSON như ví dụ."""
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-nano-2025-08-07",
             messages=[
                 {"role": "system", "content": "Bạn là một chuyên gia phân tích nghiên cứu học thuật. Bạn PHẢI trả lời chỉ với JSON hợp lệ BẰNG TIẾNG VIỆT. Không bao gồm bất kỳ văn bản nào trước hoặc sau JSON. Không sử dụng markdown code blocks. Bắt đầu phản hồi của bạn bằng { và kết thúc bằng }."},
                 {"role": "user", "content": prompt}
@@ -198,7 +245,7 @@ Bây giờ hãy phân tích tài liệu học thuật ở trên và cung cấp p
                 raise Exception(f"Không tìm thấy JSON object trong phản hồi. Response: {content[:200]}")
         
         analysis = json.loads(content)
-        print("✓ Phân tích AI hoàn tất thành công")
+        print("[OK] Phân tích AI hoàn tất thành công")
         return analysis
         
     except json.JSONDecodeError as e:
@@ -222,15 +269,18 @@ def tạo_pdf_flashcard(analysis, output_path):
             font_name = 'Arial'
             font_bold = 'Arial-Bold'
             font_italic = 'Arial-Italic'
-        except:
+        except Exception as font_error:
+            print(f"Cảnh báo: Không thể load font Arial: {font_error}")
             # Fallback to default if Arial not found
             font_name = 'Helvetica'
             font_bold = 'Helvetica-Bold'
             font_italic = 'Helvetica-Oblique'
         
+        # Tạo PDF với encoding UTF-8
         doc = SimpleDocTemplate(output_path, pagesize=letter,
                                 rightMargin=60, leftMargin=60,
-                                topMargin=60, bottomMargin=40)
+                                topMargin=60, bottomMargin=40,
+                                encoding='utf-8')
         
         elements = []
         styles = getSampleStyleSheet()
@@ -363,20 +413,20 @@ def tạo_pdf_flashcard(analysis, output_path):
         elements.append(Spacer(1, 30))
         
         # Tiêu đề
-        title = Paragraph(f"<b>{analysis['tieu_de']}</b>", title_style)
+        title = create_paragraph(f"<b>{ensure_utf8(analysis['tieu_de'])}</b>", title_style)
         elements.append(title)
         
         # Hộp metadata
-        metadata_text = f"""<b>Độ khó:</b> {analysis.get('do_kho', 'Trung bình')} | 
-        <b>Thời gian học:</b> {analysis.get('thoi_gian_hoc_uoc_tinh', '30-45 phút')}"""
-        elements.append(Paragraph(metadata_text, subtitle_style))
+        metadata_text = f"""<b>Độ khó:</b> {ensure_utf8(analysis.get('do_kho', 'Trung bình'))} | 
+        <b>Thời gian học:</b> {ensure_utf8(analysis.get('thoi_gian_hoc_uoc_tinh', '30-45 phút'))}"""
+        elements.append(create_paragraph(metadata_text, subtitle_style))
         elements.append(Spacer(1, 20))
         
         # Hộp mục tiêu học tập
         if analysis.get('muc_tieu_hoc_tap'):
-            obj_data = [[Paragraph("<b>🎯 Mục tiêu Học tập</b>", body_style)]]
+            obj_data = [[create_paragraph("<b>[1] Mục tiêu Học tập</b>", body_style)]]
             for obj in analysis['muc_tieu_hoc_tap']:
-                obj_data.append([Paragraph(f"• {obj}", body_style)])
+                obj_data.append([create_paragraph(f"• {ensure_utf8(obj)}", body_style)])
             
             obj_table = Table(obj_data, colWidths=[doc.width])
             obj_table.setStyle(TableStyle([
@@ -392,26 +442,28 @@ def tạo_pdf_flashcard(analysis, output_path):
             elements.append(Spacer(1, 20))
         
         # ============= TÓM TẮT TỔNG QUAN =============
-        elements.append(Paragraph("📋 Tóm tắt Tổng quan", section_header_style))
+        elements.append(create_paragraph("[2] Tóm tắt Tổng quan", section_header_style))
         elements.append(Spacer(1, 5))
         
         summary_text = analysis['tom_tat']
         if isinstance(summary_text, list):
-            summary_text = ' '.join(summary_text)
+            summary_text = ' '.join([ensure_utf8(s) for s in summary_text])
+        else:
+            summary_text = ensure_utf8(summary_text)
         
-        elements.append(Paragraph(summary_text, highlight_style))
+        elements.append(create_paragraph(summary_text, highlight_style))
         elements.append(Spacer(1, 15))
         
         # ============= CHỈ SỐ CHÍNH =============
         if analysis.get('tom_tat_truc_quan', {}).get('chi_so_chinh'):
             metrics = analysis['tom_tat_truc_quan']['chi_so_chinh']
-            elements.append(Paragraph("📊 Chỉ số Chính Nhanh", body_style))
+            elements.append(create_paragraph("[3] Chỉ số Chính Nhanh", body_style))
             
             metric_data = []
             for key, value in metrics.items():
                 metric_data.append([
-                    Paragraph(f"<b>{key}</b>", body_style),
-                    Paragraph(f"<font size=14 color='#1976d2'><b>{value}</b></font>", body_style)
+                    create_paragraph(f"<b>{ensure_utf8(key)}</b>", body_style),
+                    create_paragraph(f"<font size=14 color='#1976d2'><b>{ensure_utf8(value)}</b></font>", body_style)
                 ])
             
             metric_table = Table(metric_data, colWidths=[doc.width * 0.6, doc.width * 0.4])
@@ -429,7 +481,7 @@ def tạo_pdf_flashcard(analysis, output_path):
             elements.append(Spacer(1, 20))
         
         # ============= PHÁT HIỆN CHÍNH =============
-        elements.append(Paragraph("💡 Phát hiện Chính", section_header_style))
+        elements.append(create_paragraph("[4] Phát hiện Chính", section_header_style))
         elements.append(Spacer(1, 5))
         
         findings_data = []
@@ -440,8 +492,8 @@ def tạo_pdf_flashcard(analysis, output_path):
                 bg_color = colors.white
             
             findings_data.append([
-                Paragraph(f"<b>{i}</b>", body_style),
-                Paragraph(finding, body_style)
+                create_paragraph(f"<b>{i}</b>", body_style),
+                create_paragraph(ensure_utf8(finding), body_style)
             ])
         
         findings_table = Table(findings_data, colWidths=[30, doc.width - 30])
@@ -466,36 +518,38 @@ def tạo_pdf_flashcard(analysis, output_path):
         # ============= THUẬT NGỮ & ĐỊNH NGHĨA =============
         if analysis.get('thuat_ngu_chinh'):
             elements.append(PageBreak())
-            elements.append(Paragraph("📚 Thuật ngữ & Định nghĩa Chính", section_header_style))
+            elements.append(create_paragraph("[5] Thuật ngữ & Định nghĩa Chính", section_header_style))
             elements.append(Spacer(1, 10))
             
             for term, definition in analysis['thuat_ngu_chinh'].items():
-                elements.append(Paragraph(f"<b>▸ {term}</b>", term_style))
-                elements.append(Paragraph(definition, definition_style))
+                elements.append(create_paragraph(f"<b>▸ {ensure_utf8(term)}</b>", term_style))
+                elements.append(create_paragraph(ensure_utf8(definition), definition_style))
             
             elements.append(Spacer(1, 20))
         
         # ============= PHƯƠNG PHÁP =============
-        elements.append(Paragraph("🔬 Phương pháp Nghiên cứu", section_header_style))
+        elements.append(create_paragraph("[6] Phương pháp Nghiên cứu", section_header_style))
         elements.append(Spacer(1, 5))
         
         methodology_text = analysis['phuong_phap_nghien_cuu']
         if isinstance(methodology_text, list):
-            methodology_text = ' '.join(methodology_text)
+            methodology_text = ' '.join([ensure_utf8(m) for m in methodology_text])
+        else:
+            methodology_text = ensure_utf8(methodology_text)
         
-        elements.append(Paragraph(methodology_text, body_style))
+        elements.append(create_paragraph(methodology_text, body_style))
         elements.append(Spacer(1, 20))
         
         # ============= ỨNG DỤNG THỰC TẾ =============
         if analysis.get('ung_dung_thuc_te'):
-            elements.append(Paragraph("🌍 Ứng dụng Thực tế", section_header_style))
+            elements.append(create_paragraph("[7] Ứng dụng Thực tế", section_header_style))
             elements.append(Spacer(1, 5))
             
             app_data = []
             for app in analysis['ung_dung_thuc_te']:
                 app_data.append([
-                    Paragraph("✓", body_style),
-                    Paragraph(app, body_style)
+                    create_paragraph("+", body_style),
+                    create_paragraph(ensure_utf8(app), body_style)
                 ])
             
             app_table = Table(app_data, colWidths=[30, doc.width - 30])
@@ -514,25 +568,27 @@ def tạo_pdf_flashcard(analysis, output_path):
             elements.append(Spacer(1, 20))
         
         # ============= Ý NGHĨA =============
-        elements.append(Paragraph("🎓 Ý nghĩa Chính", section_header_style))
+        elements.append(create_paragraph("[8] Ý nghĩa Chính", section_header_style))
         elements.append(Spacer(1, 5))
         
         implications_text = analysis['y_nghia']
         if isinstance(implications_text, list):
-            implications_text = ' '.join(implications_text)
+            implications_text = ' '.join([ensure_utf8(i) for i in implications_text])
+        else:
+            implications_text = ensure_utf8(implications_text)
         
-        elements.append(Paragraph(implications_text, highlight_style))
+        elements.append(create_paragraph(implications_text, highlight_style))
         elements.append(Spacer(1, 20))
         
         # ============= CÂU HỎI TƯ DUY PHÊ PHÁN =============
         if analysis.get('cau_hoi_tu_duy_phe_phan'):
             elements.append(PageBreak())
-            elements.append(Paragraph("🤔 Câu hỏi Tư duy Phê phán", section_header_style))
+            elements.append(create_paragraph("[9] Câu hỏi Tư duy Phê phán", section_header_style))
             elements.append(Spacer(1, 10))
             
-            crit_data = [[Paragraph("<i>Suy ngẫm về những câu hỏi này để hiểu sâu hơn:</i>", body_style)]]
+            crit_data = [[create_paragraph("<i>Suy ngẫm về những câu hỏi này để hiểu sâu hơn:</i>", body_style)]]
             for i, q in enumerate(analysis['cau_hoi_tu_duy_phe_phan'], 1):
-                crit_data.append([Paragraph(f"<b>{i}.</b> {q}", body_style)])
+                crit_data.append([create_paragraph(f"<b>{i}.</b> {ensure_utf8(q)}", body_style)])
             
             crit_table = Table(crit_data, colWidths=[doc.width])
             crit_table.setStyle(TableStyle([
@@ -550,11 +606,11 @@ def tạo_pdf_flashcard(analysis, output_path):
         
         # ============= CÂU HỎI ÔN TẬP =============
         if analysis.get('cau_hoi_on_tap'):
-            elements.append(Paragraph("✏️ Câu hỏi Tự đánh giá", section_header_style))
+            elements.append(create_paragraph("[10] Câu hỏi Tự đánh giá", section_header_style))
             elements.append(Spacer(1, 10))
             
             for i, qa in enumerate(analysis['cau_hoi_on_tap'], 1):
-                difficulty = qa.get('do_kho', 'Trung bình')
+                difficulty = ensure_utf8(qa.get('do_kho', 'Trung bình'))
                 
                 if difficulty == 'Dễ':
                     diff_color = '#4caf50'
@@ -568,8 +624,8 @@ def tạo_pdf_flashcard(analysis, output_path):
                 
                 # Hộp câu hỏi
                 q_data = [
-                    [Paragraph(f"<b>Câu hỏi {i}</b> <font color='{diff_color}'>[{difficulty}]</font>", body_style)],
-                    [Paragraph(qa['cau_hoi'], body_style)]
+                    [create_paragraph(f"<b>Câu hỏi {i}</b> <font color='{diff_color}'>[{difficulty}]</font>", body_style)],
+                    [create_paragraph(ensure_utf8(qa['cau_hoi']), body_style)]
                 ]
                 
                 q_table = Table(q_data, colWidths=[doc.width])
@@ -595,7 +651,7 @@ def tạo_pdf_flashcard(analysis, output_path):
                     leftIndent=25,
                     leading=13
                 )
-                a_data = [[Paragraph(f"<b>Trả lời:</b> {qa['tra_loi']}", answer_style)]]
+                a_data = [[create_paragraph(f"<b>Trả lời:</b> {ensure_utf8(qa['tra_loi'])}", answer_style)]]
                 a_table = Table(a_data, colWidths=[doc.width])
                 a_table.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f5f5f5')),
@@ -610,14 +666,14 @@ def tạo_pdf_flashcard(analysis, output_path):
         
         # ============= BẢN ĐỒ TƯ DUY =============
         elements.append(PageBreak())
-        elements.append(Paragraph("🗺️ Bản đồ Tư duy Khái niệm", section_header_style))
+        elements.append(create_paragraph("[11] Bản đồ Tư duy Khái niệm", section_header_style))
         elements.append(Spacer(1, 15))
         
         # Khái niệm trung tâm
-        central = analysis['ban_do_tu_duy']['khai_niem_trung_tam']
-        central_data = [[Paragraph(f"<b>{central}</b>", 
+        central = ensure_utf8(analysis['ban_do_tu_duy']['khai_niem_trung_tam'])
+        central_data = [[create_paragraph(f"<b>{central}</b>", 
             ParagraphStyle('Central', parent=body_style, fontSize=14, 
-                          alignment=TA_CENTER, textColor=colors.white))]]
+                          alignment=TA_CENTER, textColor=colors.white, fontName=font_bold))]]
         
         central_table = Table(central_data, colWidths=[doc.width * 0.6])
         central_table.setStyle(TableStyle([
@@ -653,9 +709,9 @@ def tạo_pdf_flashcard(analysis, output_path):
             color_name = branch.get('mau', list(branch_colors.keys())[i % len(branch_colors)])
             branch_color = branch_colors.get(color_name, '#1976d2')
             
-            branch_header = Table([[Paragraph(f"<b>{branch['chu_de']}</b>", 
+            branch_header = Table([[create_paragraph(f"<b>{ensure_utf8(branch['chu_de'])}</b>", 
                 ParagraphStyle('BranchHeader', parent=body_style, 
-                              textColor=colors.white, fontSize=12))]], 
+                              textColor=colors.white, fontSize=12, fontName=font_bold))]], 
                 colWidths=[doc.width * 0.7])
             branch_header.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor(branch_color)),
@@ -668,30 +724,30 @@ def tạo_pdf_flashcard(analysis, output_path):
             elements.append(Spacer(1, 5))
             
             for point in branch['diem']:
-                point_text = Paragraph(f"  • {point}", body_style)
+                point_text = create_paragraph(f"  • {ensure_utf8(point)}", body_style)
                 elements.append(point_text)
             
             elements.append(Spacer(1, 15))
         
         # ============= MẸO HỌC TẬP =============
         elements.append(PageBreak())
-        elements.append(Paragraph("📅 Mẹo Học tập & Chiến lược Ghi nhớ", section_header_style))
+        elements.append(create_paragraph("[12] Mẹo Học tập & Chiến lược Ghi nhớ", section_header_style))
         elements.append(Spacer(1, 10))
         
         tips_data = [
-            ["📖", "<b>Ôn tập Lần 1:</b> Trong vòng 24 giờ sau khi đọc flashcard này"],
-            ["🔄", "<b>Ôn tập Lần 2:</b> 3 ngày sau lần ôn đầu tiên"],
-            ["✅", "<b>Ôn tập Lần 3:</b> 1 tuần sau lần ôn thứ hai"],
-            ["🎯", "<b>Ôn tập Cuối:</b> 2 tuần sau lần ôn thứ ba"],
-            ["💡", "<b>Gợi nhớ Chủ động:</b> Cố trả lời các câu hỏi mà không nhìn đáp án trước"],
-            ["🤝", "<b>Dạy người khác:</b> Giải thích khái niệm cho đồng học để củng cố hiểu biết"],
+            ["[1]", "<b>Ôn tập Lần 1:</b> Trong vòng 24 giờ sau khi đọc flashcard này"],
+            ["[2]", "<b>Ôn tập Lần 2:</b> 3 ngày sau lần ôn đầu tiên"],
+            ["[3]", "<b>Ôn tập Lần 3:</b> 1 tuần sau lần ôn thứ hai"],
+            ["[4]", "<b>Ôn tập Cuối:</b> 2 tuần sau lần ôn thứ ba"],
+            ["[5]", "<b>Gợi nhớ Chủ động:</b> Cố trả lời các câu hỏi mà không nhìn đáp án trước"],
+            ["[6]", "<b>Dạy người khác:</b> Giải thích khái niệm cho đồng học để củng cố hiểu biết"],
         ]
         
         tips_table_data = []
         for emoji, tip in tips_data:
             tips_table_data.append([
-                Paragraph(emoji, body_style),
-                Paragraph(tip, body_style)
+                create_paragraph(emoji, body_style),
+                create_paragraph(tip, body_style)
             ])
         
         tips_table = Table(tips_table_data, colWidths=[40, doc.width - 40])
@@ -719,9 +775,9 @@ def tạo_pdf_flashcard(analysis, output_path):
         )
         
         footer_table = Table([
-            [Paragraph("─────────────────────────────", footer_style)],
-            [Paragraph("<b>Nhàn Học - Phân tích Tài liệu</b> | Được hỗ trợ bởi AI", footer_style)],
-            [Paragraph("Học thông minh, học nhanh hơn, ghi nhớ lâu hơn 🚀", footer_style)]
+            [create_paragraph("─────────────────────────────", footer_style)],
+            [create_paragraph("<b>Nhàn Học - Phân tích Tài liệu</b> | Được hỗ trợ bởi AI", footer_style)],
+            [create_paragraph("Học thông minh, học nhanh hơn, ghi nhớ lâu hơn", footer_style)]
         ], colWidths=[doc.width])
         footer_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -730,8 +786,8 @@ def tạo_pdf_flashcard(analysis, output_path):
         
         # Xây dựng PDF
         doc.build(elements)
-        print(f"✓ PDF flashcard kiến thức nâng cao đã được tạo thành công!")
-        print(f"✓ Output: {output_path}")
+        print(f"[OK] PDF flashcard kiến thức nâng cao đã được tạo thành công!")
+        print(f"[OK] Output: {output_path}")
         
     except Exception as e:
         print(f"Lỗi khi tạo PDF: {str(e)}")
@@ -755,39 +811,119 @@ def xử_lý_pdf_đồng_bộ(pdf_path, filename):
         
         # Bước 3: Tạo PDF output
         print("Đang tạo PDF flashcard...")
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
+        # Tạo file tạm với encoding UTF-8
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf', mode='wb') as temp_output:
             output_path = temp_output.name
         
         tạo_pdf_flashcard(analysis, output_path)
         
-        # Đọc file PDF đã tạo
+        # Đọc file PDF đã tạo với binary mode
         with open(output_path, 'rb') as f:
             pdf_content = f.read()
         
         # Cleanup
-        os.unlink(output_path)
+        try:
+            os.unlink(output_path)
+        except Exception as cleanup_error:
+            print(f"Cảnh báo khi cleanup file: {cleanup_error}")
         
         return pdf_content
         
     except Exception as e:
         print(f"Lỗi trong xử lý PDF: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise e
 
 def process_pdf_job(job_id, pdf_path, filename):
-    """Xử lý PDF job trong background thread"""
+    """Xử lý PDF job trong background thread với progress bar"""
     try:
         print(f"[PDF Job {job_id}] Bắt đầu xử lý...")
         pdf_job_storage[job_id]['status'] = 'processing'
+        pdf_job_storage[job_id]['progress'] = 0
         pdf_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
         
-        # Xử lý PDF
-        pdf_content = xử_lý_pdf_đồng_bộ(pdf_path, filename)
+        # Progress 0-15%: Đọc file
+        update_progress(job_id, 1, "Đang đọc file PDF...")
+        time.sleep(0.5)
+        
+        # Bước 1: Trích xuất text từ PDF
+        print("Đang trích xuất text từ PDF...")
+        update_progress(job_id, 5, "Đang trích xuất nội dung...")
+        text = trích_xuất_text_từ_pdf(pdf_path)
+        
+        if len(text.strip()) < 100:
+            raise Exception('PDF có vẻ rỗng hoặc không đọc được')
+        
+        # Progress 15-25%: Hoàn thành trích xuất
+        update_progress(job_id, 15, "Đã trích xuất nội dung thành công")
+        time.sleep(0.3)
+        
+        # Progress 25-70%: Phân tích với AI (giả lập chậm)
+        update_progress(job_id, 25, "Đang gửi dữ liệu đến AI...")
+        time.sleep(0.5)
+        
+        # Chạy progress giả trong khi đợi AI
+        progress_thread = threading.Thread(
+            target=simulate_progress,
+            args=(job_id, 30, 65, 3, "Đang phân tích nội dung với AI...")
+        )
+        progress_thread.start()
+        
+        print("Đang phân tích nội dung với AI...")
+        analysis = phân_tích_với_ai(text)
+        
+        # Đợi progress thread hoàn thành
+        progress_thread.join()
+        update_progress(job_id, 70, "Phân tích AI hoàn tất")
+        time.sleep(0.3)
+        
+        # Progress 70-95%: Tạo PDF
+        update_progress(job_id, 75, "Đang tạo PDF flashcard...")
+        time.sleep(0.5)
+        
+        # Chạy progress giả trong khi tạo PDF
+        progress_thread = threading.Thread(
+            target=simulate_progress,
+            args=(job_id, 80, 93, 2, "Đang render PDF...")
+        )
+        progress_thread.start()
+        
+        print("Đang tạo PDF flashcard...")
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf', mode='wb') as temp_output:
+            output_path = temp_output.name
+        
+        tạo_pdf_flashcard(analysis, output_path)
+        
+        # Đọc file PDF đã tạo với binary mode
+        with open(output_path, 'rb') as f:
+            pdf_content = f.read()
+        
+        # Cleanup
+        try:
+            os.unlink(output_path)
+        except Exception as cleanup_error:
+            print(f"Cảnh báo khi cleanup file: {cleanup_error}")
+        
+        # Đợi progress thread hoàn thành
+        progress_thread.join()
+        update_progress(job_id, 95, "Hoàn tất tạo PDF")
+        time.sleep(0.3)
+        
+        # Progress 95-99%: Encode và lưu trữ
+        update_progress(job_id, 97, "Đang lưu kết quả...")
         
         # Encode PDF content thành base64 để lưu trữ
         pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
         
+        # Progress 99%: Hoàn thành
+        update_progress(job_id, 99, "Hoàn tất xử lý")
+        time.sleep(0.2)
+        
         # Cập nhật kết quả
         pdf_job_storage[job_id]['status'] = 'completed'
+        pdf_job_storage[job_id]['progress'] = 100
+        pdf_job_storage[job_id]['progress_message'] = "Hoàn thành!"
         pdf_job_storage[job_id]['result'] = {
             'pdf_content': pdf_base64,
             'filename': f'phan_tich_{filename}'
@@ -801,6 +937,8 @@ def process_pdf_job(job_id, pdf_path, filename):
         print(f"[PDF Job {job_id}] Lỗi: {str(e)}")
         pdf_job_storage[job_id]['status'] = 'failed'
         pdf_job_storage[job_id]['error'] = str(e)
+        pdf_job_storage[job_id]['progress'] = 0
+        pdf_job_storage[job_id]['progress_message'] = f"Lỗi: {str(e)}"
         pdf_job_storage[job_id]['updated_at'] = datetime.now().isoformat()
     
     finally:
@@ -837,6 +975,8 @@ def phân_tích_pdf():
         pdf_job_storage[job_id] = {
             'job_id': job_id,
             'status': 'pending',
+            'progress': 0,
+            'progress_message': 'Đang chuẩn bị...',
             'filename': file.filename,
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat(),

@@ -11,6 +11,7 @@ const PDFAnalysis = () => {
   const [error, setError] = useState('');
   const [resultPdfUrl, setResultPdfUrl] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -53,28 +54,16 @@ const PDFAnalysis = () => {
     setIsAnalyzing(true);
     setError('');
     setProgress(0);
+    setProgressMessage('Đang chuẩn bị...');
 
     const formData = new FormData();
     formData.append('file', file);
-
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
-        }
-        return prev + 10;
-      });
-    }, 1000);
 
     try {
       const response = await fetch(`${API_CONFIG.baseURL}/api/analyze-pdf`, {
         method: 'POST',
         body: formData,
       });
-
-      clearInterval(progressInterval);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -92,13 +81,12 @@ const PDFAnalysis = () => {
     } catch (err) {
       console.error('Error analyzing PDF:', err);
       setError(err.message || 'Có lỗi xảy ra khi phân tích PDF');
-      clearInterval(progressInterval);
       setIsAnalyzing(false);
     }
   };
 
   // Hàm polling để kiểm tra trạng thái PDF job
-  const pollPdfStatus = async (jobId, maxAttempts = 120, interval = 2000) => {
+  const pollPdfStatus = async (jobId, maxAttempts = 120, interval = 1000) => {
     let attempts = 0;
 
     const checkStatus = async () => {
@@ -113,7 +101,15 @@ const PDFAnalysis = () => {
         }
 
         const jobData = await response.json();
-        console.log(`[PDF Polling] Trạng thái: ${jobData.status}`);
+        console.log(`[PDF Polling] Trạng thái: ${jobData.status}, Progress: ${jobData.progress}%`);
+
+        // Cập nhật progress từ backend
+        if (jobData.progress !== undefined) {
+          setProgress(jobData.progress);
+        }
+        if (jobData.progress_message) {
+          setProgressMessage(jobData.progress_message);
+        }
 
         if (jobData.status === 'completed') {
           console.log('[PDF Polling] ✅ Hoàn thành!');
@@ -132,6 +128,7 @@ const PDFAnalysis = () => {
           setResultPdfUrl(url);
           setAnalysisComplete(true);
           setProgress(100);
+          setProgressMessage('Hoàn thành!');
           setIsAnalyzing(false);
           return true;
         }
@@ -188,6 +185,7 @@ const PDFAnalysis = () => {
     setResultPdfUrl(null);
     setError('');
     setProgress(0);
+    setProgressMessage('');
   };
 
   return (
@@ -254,7 +252,7 @@ const PDFAnalysis = () => {
                 <div className="analyzing-status">
                   <Loader size={24} className="spinner" />
                   <div className="progress-info">
-                    <p>Đang phân tích tài liệu...</p>
+                    <p>{progressMessage || 'Đang phân tích tài liệu...'}</p>
                     <div className="progress-bar">
                       <div 
                         className="progress-fill" 
@@ -358,10 +356,10 @@ const PDFAnalysis = () => {
 
               <div className="result-info">
                 <p className="info-text">
-                  📚 Flashcard đã được tạo với đầy đủ nội dung phân tích chi tiết
+                  [*] Flashcard đã được tạo với đầy đủ nội dung phân tích chi tiết
                 </p>
                 <p className="info-text">
-                  💡 Sử dụng flashcard để ôn tập và ghi nhớ kiến thức hiệu quả
+                  [*] Sử dụng flashcard để ôn tập và ghi nhớ kiến thức hiệu quả
                 </p>
               </div>
             </div>
