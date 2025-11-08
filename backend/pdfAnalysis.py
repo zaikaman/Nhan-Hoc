@@ -22,14 +22,25 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from dotenv import load_dotenv
 
-# Đảm bảo encoding UTF-8 cho Python
+# ===== CRITICAL: Đảm bảo encoding UTF-8 cho tất cả môi trường =====
+# Thiết lập encoding mặc định
 if sys.platform.startswith('win'):
-    # Thiết lập encoding mặc định cho Windows
-    import locale
+    # Windows
     if sys.stdout.encoding != 'utf-8':
         sys.stdout.reconfigure(encoding='utf-8')
     if sys.stderr.encoding != 'utf-8':
         sys.stderr.reconfigure(encoding='utf-8')
+elif sys.platform.startswith('linux') or os.getenv('DYNO'):
+    # Linux/Heroku
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    if sys.stdout.encoding != 'utf-8':
+        import io as io_module
+        sys.stdout = io_module.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    if sys.stderr.encoding != 'utf-8':
+        import io as io_module
+        sys.stderr = io_module.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
+print(f"[PDF Analysis] Encoding: stdout={sys.stdout.encoding}, stderr={sys.stderr.encoding}")
 
 load_dotenv()
 
@@ -260,27 +271,96 @@ def tạo_pdf_flashcard(analysis, output_path):
     """Tạo PDF flashcard kiến thức giáo dục đẹp và toàn diện"""
     try:
         # Đăng ký font Unicode hỗ trợ tiếng Việt
-        # Sử dụng font Arial có sẵn trên Windows
-        try:
-            # Đường dẫn font trên Windows
-            pdfmetrics.registerFont(TTFont('Arial', 'C:/Windows/Fonts/arial.ttf'))
-            pdfmetrics.registerFont(TTFont('Arial-Bold', 'C:/Windows/Fonts/arialbd.ttf'))
-            pdfmetrics.registerFont(TTFont('Arial-Italic', 'C:/Windows/Fonts/ariali.ttf'))
-            font_name = 'Arial'
-            font_bold = 'Arial-Bold'
-            font_italic = 'Arial-Italic'
-        except Exception as font_error:
-            print(f"Cảnh báo: Không thể load font Arial: {font_error}")
-            # Fallback to default if Arial not found
+        font_name = 'Arial'
+        font_bold = 'Arial-Bold'
+        font_italic = 'Arial-Italic'
+        
+        # Thử load font từ nhiều nguồn
+        font_loaded = False
+        
+        # 1. Thử Windows fonts
+        if sys.platform.startswith('win'):
+            try:
+                pdfmetrics.registerFont(TTFont('Arial', 'C:/Windows/Fonts/arial.ttf'))
+                pdfmetrics.registerFont(TTFont('Arial-Bold', 'C:/Windows/Fonts/arialbd.ttf'))
+                pdfmetrics.registerFont(TTFont('Arial-Italic', 'C:/Windows/Fonts/ariali.ttf'))
+                font_loaded = True
+                print("[PDF] ✓ Loaded Windows Arial fonts")
+            except Exception as e:
+                print(f"[PDF] Windows fonts not available: {e}")
+        
+        # 2. Thử DejaVu fonts (có sẵn trên nhiều Linux distros)
+        if not font_loaded:
+            try:
+                from reportlab.pdfbase.ttfonts import TTFont
+                import matplotlib.font_manager as fm
+                
+                # Tìm DejaVu Sans font
+                dejavu_path = None
+                for font in fm.findSystemFonts(fontpaths=None, fontext='ttf'):
+                    if 'DejaVuSans.ttf' in font:
+                        dejavu_path = font
+                        break
+                
+                if dejavu_path:
+                    pdfmetrics.registerFont(TTFont('Arial', dejavu_path))
+                    # Dùng cùng font cho bold và italic
+                    pdfmetrics.registerFont(TTFont('Arial-Bold', dejavu_path))
+                    pdfmetrics.registerFont(TTFont('Arial-Italic', dejavu_path))
+                    font_loaded = True
+                    print(f"[PDF] ✓ Loaded DejaVu fonts from {dejavu_path}")
+            except Exception as e:
+                print(f"[PDF] DejaVu fonts not available: {e}")
+        
+        # 3. Fallback: Download và cache fonts
+        if not font_loaded and (sys.platform.startswith('linux') or os.getenv('DYNO')):
+            try:
+                import urllib.request
+                import tempfile
+                
+                fonts_dir = os.path.join(tempfile.gettempdir(), 'nhan_hoc_fonts')
+                os.makedirs(fonts_dir, exist_ok=True)
+                
+                font_urls = {
+                    'Arial': 'https://github.com/matomo-org/travis-scripts/raw/master/fonts/Arial.ttf',
+                    'Arial-Bold': 'https://github.com/matomo-org/travis-scripts/raw/master/fonts/Arial_Bold.ttf',
+                }
+                
+                for font_key, url in font_urls.items():
+                    font_file = os.path.join(fonts_dir, f'{font_key}.ttf')
+                    
+                    # Download nếu chưa có
+                    if not os.path.exists(font_file):
+                        print(f"[PDF] Downloading {font_key} from {url}...")
+                        urllib.request.urlretrieve(url, font_file)
+                        print(f"[PDF] ✓ Downloaded {font_key}")
+                    
+                    pdfmetrics.registerFont(TTFont(font_key, font_file))
+                
+                # Dùng Arial cho italic
+                pdfmetrics.registerFont(TTFont('Arial-Italic', os.path.join(fonts_dir, 'Arial.ttf')))
+                font_loaded = True
+                print("[PDF] ✓ Loaded downloaded fonts")
+                
+            except Exception as e:
+                print(f"[PDF] Font download failed: {e}")
+        
+        # 4. Cuối cùng fallback to Helvetica (không hỗ trợ tiếng Việt tốt)
+        if not font_loaded:
             font_name = 'Helvetica'
             font_bold = 'Helvetica-Bold'
             font_italic = 'Helvetica-Oblique'
+            print("[PDF] ⚠ Fallback to Helvetica (limited Vietnamese support)")
         
-        # Tạo PDF với encoding UTF-8
-        doc = SimpleDocTemplate(output_path, pagesize=letter,
-                                rightMargin=60, leftMargin=60,
-                                topMargin=60, bottomMargin=40,
-                                encoding='utf-8')
+        # Tạo PDF với encoding UTF-8 - CRITICAL cho Heroku
+        doc = SimpleDocTemplate(
+            output_path, 
+            pagesize=letter,
+            rightMargin=60, 
+            leftMargin=60,
+            topMargin=60, 
+            bottomMargin=40
+        )
         
         elements = []
         styles = getSampleStyleSheet()

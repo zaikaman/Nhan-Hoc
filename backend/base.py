@@ -5,7 +5,28 @@ import generativeResources
 import chatbot
 from flask_cors import CORS
 import os
+import sys
 from dotenv import load_dotenv
+
+# ===== CRITICAL: Đảm bảo UTF-8 encoding cho Heroku =====
+# Phải đặt trước khi load bất kỳ module nào khác
+if sys.platform.startswith('linux') or os.getenv('DYNO'):  # Heroku detection
+    # Force UTF-8 trên Heroku
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    os.environ['LANG'] = 'en_US.UTF-8'
+    os.environ['LC_ALL'] = 'en_US.UTF-8'
+    
+    # Reconfigure streams
+    if sys.stdout.encoding != 'utf-8':
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    if sys.stderr.encoding != 'utf-8':
+        import io
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    
+    print("✓ Heroku UTF-8 encoding configured")
+    print(f"  stdout: {sys.stdout.encoding}")
+    print(f"  stderr: {sys.stderr.encoding}")
 
 load_dotenv()
 
