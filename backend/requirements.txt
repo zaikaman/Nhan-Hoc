@@ -1,0 +1,6 @@
+Flask==3.0.3
+flask_cors==4.0.1
+protobuf>=5.26.1,<6.0.0
+python-dotenv==1.0.1
+openai
+pillow>=9.2.0,<12.0
