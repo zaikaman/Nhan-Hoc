@@ -17,6 +17,39 @@
 
 ### 1️⃣ Deploy Backend (Heroku)
 
+#### **CÁCH 1: Sử dụng Buildpack Subdirectory** (Khuyến nghị - Dễ hơn)
+
+```bash
+# Bước 1: Đăng nhập Heroku
+heroku login
+
+# Bước 2: Tạo app Heroku (từ thư mục root của project)
+heroku create your-app-name
+
+# Bước 3: Cấu hình buildpack cho subdirectory
+heroku buildpacks:clear
+heroku buildpacks:add https://github.com/timanovsky/subdir-heroku-buildpack
+heroku buildpacks:add heroku/python
+
+# Bước 4: Set biến môi trường
+heroku config:set PROJECT_PATH=backend
+heroku config:set OPENAI_API_KEY=your_openai_key_here
+
+# Bước 5: Commit và Deploy
+git add .
+git commit -m "Setup for Heroku deployment"
+git push origin main
+git push heroku main
+
+# Kiểm tra logs
+heroku logs --tail
+
+# Mở app để test
+heroku open
+```
+
+#### **CÁCH 2: Sử dụng Git Subtree** (Nếu cách 1 không hoạt động)
+
 ```bash
 # Bước 1: Đăng nhập Heroku
 heroku login
@@ -32,7 +65,7 @@ git add .
 git commit -m "Setup for Heroku deployment"
 git push origin main
 
-# Bước 5: Tạo git subtree cho backend
+# Bước 5: Push chỉ thư mục backend lên Heroku
 git subtree push --prefix backend heroku main
 
 # Kiểm tra logs
@@ -94,6 +127,16 @@ heroku logs --tail
 ## 🔧 Update sau này
 
 ### Update Backend
+
+**Nếu dùng Cách 1 (Buildpack):**
+```bash
+git add .
+git commit -m "Update backend"
+git push origin main
+git push heroku main
+```
+
+**Nếu dùng Cách 2 (Git Subtree):**
 ```bash
 git add .
 git commit -m "Update backend"
@@ -125,8 +168,10 @@ git push origin main
    - ✅ Tất cả các file frontend sử dụng API_CONFIG
    - ✅ Backend có CORS configuration
    - ✅ Backend có health check endpoint
+   - ✅ `project.toml` - Cấu hình subdirectory cho Heroku
 
 3. **Cần làm thủ công:**
+   - ⚠️ Chọn 1 trong 2 cách deploy backend
    - ⚠️ Tạo app trên Heroku
    - ⚠️ Set OPENAI_API_KEY trên Heroku
    - ⚠️ Cập nhật URL backend trong `.env.production`

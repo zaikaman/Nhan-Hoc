@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
 import "./profile.css";
 import Header from "../../components/header/header";
@@ -80,7 +80,7 @@ const ProfilePage = (props) => {
     Legend
   );
   const topics = JSON.parse(localStorage.getItem("topics")) || {};
-  const colors = [
+  const colors = useMemo(() => [
     "#D14EC4",
     "#AFD14E",
     "#4ED1B1",
@@ -88,7 +88,7 @@ const ProfilePage = (props) => {
     "#D1854E",
     "#904ED1",
     "#4EAAD1",
-  ];
+  ], []);
   const [stats, setStats] = useState({});
   const [percentCompletedData, setPercentCompletedData] = useState({});
 
