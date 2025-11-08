@@ -31,6 +31,7 @@ const TopicPage = (props) => {
   const [time, setTime] = useState("4 Weeks");
   const [knowledgeLevel, setKnowledgeLevel] = useState("Absolute Beginner");
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Đang tạo lộ trình...");
 
   useEffect(() => {
     if (topic) {
@@ -177,48 +178,127 @@ const TopicPage = (props) => {
   };
   const SubmitButton = ({ children }) => {
     const navigate = useNavigate();
+    
+    // Hàm polling để kiểm tra trạng thái job
+    const pollJobStatus = async (jobId, maxAttempts = 120, interval = 2000) => {
+      let attempts = 0;
+      
+      const checkStatus = async () => {
+        try {
+          attempts++;
+          const elapsedSeconds = (attempts * interval) / 1000;
+          console.log(`[Polling] Lần thử ${attempts}/${maxAttempts} - Job ID: ${jobId}`);
+          
+          // Cập nhật loading message
+          setLoadingMessage(`Đang xử lý... (${elapsedSeconds.toFixed(0)}s)`);
+          
+          const response = await axios.get(`/api/roadmap/status/${jobId}`);
+          const jobData = response.data;
+          
+          console.log(`[Polling] Trạng thái: ${jobData.status}`);
+          
+          if (jobData.status === 'completed') {
+            console.log('[Polling] ✅ Hoàn thành!');
+            setLoading(false);
+            
+            // Lưu vào localStorage
+            let topics = JSON.parse(localStorage.getItem("topics")) || {};
+            topics[topic] = { time, knowledge_level: knowledgeLevel };
+            localStorage.setItem("topics", JSON.stringify(topics));
+            
+            let roadmaps = JSON.parse(localStorage.getItem("roadmaps")) || {};
+            roadmaps[topic] = jobData.result;
+            localStorage.setItem("roadmaps", JSON.stringify(roadmaps));
+            
+            navigate("/roadmap?topic=" + encodeURI(topic));
+            return true;
+          } 
+          else if (jobData.status === 'failed') {
+            console.error('[Polling] ❌ Lỗi:', jobData.error);
+            setLoading(false);
+            alert(`Lỗi khi tạo lộ trình: ${jobData.error || 'Unknown error'}`);
+            navigate("/");
+            return true;
+          }
+          else if (attempts >= maxAttempts) {
+            console.error('[Polling] ⏱️ Timeout - Đã hết thời gian chờ');
+            setLoading(false);
+            alert("Quá trình tạo lộ trình mất quá nhiều thời gian. Vui lòng thử lại sau.");
+            navigate("/");
+            return true;
+          }
+          
+          // Tiếp tục polling nếu vẫn đang xử lý
+          setTimeout(checkStatus, interval);
+          return false;
+          
+        } catch (error) {
+          console.error('[Polling] Lỗi khi kiểm tra trạng thái:', error);
+          
+          if (attempts >= maxAttempts) {
+            setLoading(false);
+            alert("Không thể kiểm tra trạng thái job. Vui lòng thử lại.");
+            navigate("/");
+            return true;
+          }
+          
+          // Thử lại sau một khoảng thời gian
+          setTimeout(checkStatus, interval);
+          return false;
+        }
+      };
+      
+      // Bắt đầu polling
+      await checkStatus();
+    };
+    
     return (
       <button
         className="SubmitButton"
-        onClick={() => {
+        onClick={async () => {
           if (time === "0 Weeks" || time === "0 Months") {
             alert("Vui lòng nhập khoảng thời gian hợp lệ");
             return;
           }
+          
           setLoading(true);
-          // check if topic is already present on localstorage
+          
+          // Kiểm tra xem topic đã tồn tại chưa
           let topics = JSON.parse(localStorage.getItem("topics")) || {};
-          if (!Object.keys(topics).includes(topic)) {
+          if (Object.keys(topics).includes(topic)) {
+            // Nếu đã có, chuyển thẳng đến roadmap
+            navigate("/roadmap?topic=" + encodeURI(topic));
+            return;
+          }
+          
+          try {
             let data = { topic, time, knowledge_level: knowledgeLevel };
-            console.log(data);
+            console.log('[Submit] Gửi request tạo roadmap:', data);
+            
             axios.defaults.baseURL = API_CONFIG.baseURL;
-            axios({
+            
+            // Gọi API để tạo job
+            const response = await axios({
               method: "POST",
               url: "/api/roadmap",
               data: data,
               headers: {
                 "Content-Type": "application/json",
               },
-            })
-              .then((res) => {
-                topics[topic] = { time, knowledge_level: knowledgeLevel };
-                localStorage.setItem("topics", JSON.stringify(topics));
-                let roadmaps =
-                  JSON.parse(localStorage.getItem("roadmaps")) || {};
-
-                roadmaps[topic] = res.data;
-                localStorage.setItem("roadmaps", JSON.stringify(roadmaps));
-                navigate("/roadmap?topic=" + encodeURI(topic));
-              })
-              .catch((error) => {
-                console.log(error);
-                alert(
-                  "Đã xảy ra lỗi khi tạo lộ trình. Vui lòng thử lại sau."
-                );
-                navigate("/");
-              });
-          } else {
-            navigate("/roadmap?topic=" + encodeURI(topic));
+            });
+            
+            const { job_id, status, message } = response.data;
+            console.log(`[Submit] Job đã tạo - ID: ${job_id}, Status: ${status}`);
+            console.log(`[Submit] ${message}`);
+            
+            // Bắt đầu polling để kiểm tra trạng thái
+            await pollJobStatus(job_id);
+            
+          } catch (error) {
+            console.error('[Submit] Lỗi:', error);
+            setLoading(false);
+            alert("Đã xảy ra lỗi khi tạo lộ trình. Vui lòng thử lại sau.");
+            navigate("/");
           }
         }}
       >
@@ -243,7 +323,7 @@ const TopicPage = (props) => {
   return (
     <div className="wrapper">
       <Loader style={{ display: loading ? "block" : "none" }}>
-        Đang tạo lộ trình...
+        {loadingMessage}
       </Loader>
       <Header></Header>
       {!topic ? <SetTopic /> : <SetDetails />}

@@ -30,15 +30,44 @@ def health_check():
 
 @api.route("/api/roadmap", methods=["POST"])
 def get_roadmap():
+    """Tạo job roadmap và trả về job_id ngay lập tức"""
     req = request.get_json()
 
-    response_body = roadmap.create_roadmap(
+    job_id = roadmap.create_roadmap(
         topic=req.get("topic", "Machine Learning"),
         time=req.get("time", "4 weeks"),
-        knowledge_level=req.get("knowledge_level", "Absoulte Beginner"),
+        knowledge_level=req.get("knowledge_level", "Absolute Beginner"),
     )
 
-    return response_body
+    return {
+        "job_id": job_id,
+        "status": "pending",
+        "message": "Đang xử lý roadmap của bạn. Vui lòng đợi..."
+    }, 202
+
+
+@api.route("/api/roadmap/status/<job_id>", methods=["GET"])
+def get_roadmap_status(job_id):
+    """Kiểm tra trạng thái của job"""
+    job = roadmap.get_job_status(job_id)
+    
+    if job is None:
+        return {"error": "Không tìm thấy job"}, 404
+    
+    response = {
+        "job_id": job['job_id'],
+        "status": job['status'],
+        "created_at": job['created_at'],
+        "updated_at": job['updated_at']
+    }
+    
+    if job['status'] == 'completed':
+        response['result'] = job['result']
+        response['completed_at'] = job.get('completed_at')
+    elif job['status'] == 'failed':
+        response['error'] = job.get('error', 'Unknown error')
+    
+    return response, 200
 
 
 @api.route("/api/quiz", methods=["POST"])
