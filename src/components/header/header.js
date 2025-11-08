@@ -2,9 +2,9 @@ import { NavLink } from "react-router-dom";
 import "./header.css";
 import { Database, MessageCircle } from "lucide-react";
 
-const Header = () => {
+const Header = ({ chatStyle = false }) => {
   return (
-    <header>
+    <header className={chatStyle ? "chat-header-style" : ""}>
       <NavLink to="/" className="logo-link">
         <div className="logo-container">
           <img src={`${process.env.PUBLIC_URL}/logo.png`} alt="Nhàn Học" height={100} width={100} className="logo" />

@@ -8,6 +8,13 @@ header {
   height: 120px;
 }
 
+/* Style đặc biệt cho header trong trang chat */
+header.chat-header-style {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+  backdrop-filter: blur(10px);
+}
+
 .logo-link {
   display: flex;
   align-items: center;

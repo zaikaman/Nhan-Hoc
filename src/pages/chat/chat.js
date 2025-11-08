@@ -322,7 +322,7 @@ const ChatPage = () => {
 
   return (
     <div className="chat-page">
-      <Header />
+      <Header chatStyle={true} />
 
       <div className="chat-container">
         {/* Sidebar */}
