@@ -10,7 +10,6 @@ import {
   deleteResource,
   clearAllResources,
   getResourceStats,
-  saveLearningActivity,
 } from "../../utils/indexedDB";
 import { Trash2, Database, FolderOpen } from "lucide-react";
 import Markdown from "react-markdown";
@@ -23,7 +22,7 @@ const ResourcesPage = () => {
   const navigate = useNavigate();
 
   // 📊 TRACKING: Theo dõi thời gian xem từng tài liệu
-  const resourceTracking = usePageTracking(
+  usePageTracking(
     selectedResource?.topic || 'Resources',
     selectedResource?.subtopic || 'Danh sách tài nguyên',
     'view_resource',
