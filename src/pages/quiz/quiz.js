@@ -106,14 +106,23 @@ const QuizPage = (props) => {
       !Object.keys(topics).includes(course)
     ) {
       navigate("/");
+      return;
     }
     const week = Object.keys(roadmaps[course])[weekNum - 1];
-    setTopic(roadmaps[course][week].topic);
+    if (!week || !roadmaps[course][week]) {
+      navigate("/");
+      return;
+    }
+    setTopic(roadmaps[course][week]["chủ đề"] || roadmaps[course][week].topic);
     console.log(weekNum, week, Object.keys(roadmaps[course]));
-    setSubtopic(roadmaps[course][week].subtopics[subtopicNum - 1].subtopic);
-    setDescription(
-      roadmaps[course][week].subtopics[subtopicNum - 1].description
-    );
+    const subtopics = roadmaps[course][week]["các chủ đề con"] || roadmaps[course][week].subtopics || [];
+    const currentSubtopic = subtopics[subtopicNum - 1];
+    if (!currentSubtopic) {
+      navigate("/");
+      return;
+    }
+    setSubtopic(currentSubtopic["chủ đề con"] || currentSubtopic.subtopic);
+    setDescription(currentSubtopic["mô tả"] || currentSubtopic.description);
   }, [course, weekNum, subtopicNum]);
 
   useEffect(() => {

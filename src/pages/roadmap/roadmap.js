@@ -38,10 +38,10 @@ const RoadmapPage = (props) => {
   useEffect(() => {
     const topics = JSON.parse(localStorage.getItem("topics")) || {};
 
-    setTopicDetails(topics[topic]);
+    setTopicDetails(topics[topic] || { time: "-", knowledge_level: "-" });
 
     const roadmaps = JSON.parse(localStorage.getItem("roadmaps")) || {};
-    setRoadmap(roadmaps[topic]);
+    setRoadmap(roadmaps[topic] || {});
     // setLoading(true);
     // translateObj(roadmaps[topic], "hi").then((translatedObj) => {
     // setRoadmap(translatedObj);
@@ -90,17 +90,17 @@ const RoadmapPage = (props) => {
               textTransform: "capitalize",
             }}
           >
-            {subtopic.subtopic}
+            {subtopic["chủ đề con"] || subtopic.subtopic}
           </h3>
           <p className="time">
             {(
-              parseFloat(subtopic.time.replace(/^\D+/g, "")) *
+              parseFloat((subtopic["thời gian"] || subtopic.time).replace(/^\D+/g, "")) *
               (parseFloat(localStorage.getItem("hardnessIndex")) || 1)
             ).toFixed(1)}{" "}
-            {subtopic.time.replace(/[0-9]/g, "")}
+            {(subtopic["thời gian"] || subtopic.time).replace(/[0-9]/g, "")}
           </p>
           <p style={{ fontWeight: "300", opacity: "61%", marginTop: "1em" }}>
-            {subtopic.description}
+            {subtopic["mô tả"] || subtopic.description}
           </p>
         </div>
         <div
@@ -127,17 +127,17 @@ const RoadmapPage = (props) => {
             onClick={() => {
               setModalOpen(true);
               setResourceParam({
-                subtopic: subtopic.subtopic,
-                description: subtopic.description,
-                time: subtopic.time,
+                subtopic: subtopic["chủ đề con"] || subtopic.subtopic,
+                description: subtopic["mô tả"] || subtopic.description,
+                time: subtopic["thời gian"] || subtopic.time,
                 course: topic,
-                knowledge_level: topicDetails.knowledge_level,
+                knowledge_level: topicDetails?.knowledge_level || "-",
               });
             }}
           >
             Resources
           </button>
-          {quizStats.timeTaken ? (
+          {quizStats && quizStats.timeTaken ? (
             <div className="quiz_completed">
               {((quizStats.numCorrect * 100) / quizStats.numQues).toFixed(1) +
                 "% Đúng trong " +
@@ -215,6 +215,7 @@ const RoadmapPage = (props) => {
                 number={i + 1}
                 weekNum={weekNum}
                 quizStats={quizStats[i + 1] || {}}
+                key={i}
               ></Subtopic>
             ))}
           </div>
@@ -323,10 +324,11 @@ const RoadmapPage = (props) => {
             .map((week, i) => {
               return (
                 <TopicBar
+                  key={i}
                   weekNum={i + 1}
                   week={week}
-                  topic={roadmap[week].topic}
-                  subtopics={roadmap[week].subtopics}
+                  topic={roadmap[week]["chủ đề"] || roadmap[week].topic}
+                  subtopics={roadmap[week]["các chủ đề con"] || roadmap[week].subtopics}
                   color={colors[i % colors.length]}
                   quizStats={quizStats[i + 1] || {}}
                 ></TopicBar>
