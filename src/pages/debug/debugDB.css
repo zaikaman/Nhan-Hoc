@@ -60,7 +60,7 @@
   font-weight: bold;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   cursor: pointer;
   margin-right: 1rem;
@@ -69,7 +69,7 @@
 
 .debug-section button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
 }
 
 .debug-section button:disabled {
@@ -104,8 +104,8 @@
 }
 
 .log-info {
-  background: rgba(79, 172, 254, 0.2);
-  border-left: 3px solid #4facfe;
+  background: rgba(102, 126, 234, 0.2);
+  border-left: 3px solid #667eea;
 }
 
 .log-success {

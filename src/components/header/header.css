@@ -10,8 +10,8 @@ header {
 
 /* Style đặc biệt cho header trong trang chat */
 header.chat-header-style {
-  background: linear-gradient(135deg, rgba(79, 172, 254, 0.15) 0%, rgba(0, 242, 254, 0.1) 100%);
-  border-bottom: 2px solid rgba(79, 172, 254, 0.3);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-bottom: 2px solid rgba(102, 126, 234, 0.3);
   backdrop-filter: blur(10px);
 }
 
@@ -73,7 +73,7 @@ header .ChatBot.active svg,
 header .Resources.active svg,
 header .Analytics.active svg,
 header .Recommendations.active svg {
-  color: #4facfe !important;
+  color: #667eea !important;
   opacity: 1;
 }
 
