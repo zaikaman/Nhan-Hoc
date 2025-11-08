@@ -232,3 +232,94 @@ def get_chat_status(job_id):
         response['error'] = job.get('error', 'Unknown error')
     
     return response, 200
+
+
+# ===== ANALYTICS ENDPOINTS =====
+import analytics
+
+@api.route("/api/analytics/overview", methods=["POST", "OPTIONS"])
+def get_analytics_overview():
+    """Tính toán metrics tổng quan từ dữ liệu học tập"""
+    if request.method == "OPTIONS":
+        return {}, 200
+    
+    try:
+        req = request.get_json()
+        learning_data = req.get("learning_data", {})
+        
+        metrics = analytics.calculate_progress_metrics(learning_data)
+        
+        return {
+            "status": "success",
+            "data": metrics
+        }, 200
+        
+    except Exception as e:
+        print(f"Lỗi trong analytics overview: {str(e)}")
+        return {"error": str(e)}, 500
+
+
+@api.route("/api/analytics/insights", methods=["POST", "OPTIONS"])
+def get_analytics_insights():
+    """Phân tích patterns và tạo AI insights"""
+    if request.method == "OPTIONS":
+        return {}, 200
+    
+    try:
+        req = request.get_json()
+        learning_data = req.get("learning_data", {})
+        
+        insights = analytics.analyze_learning_patterns(learning_data)
+        
+        return {
+            "status": "success",
+            "data": insights
+        }, 200
+        
+    except Exception as e:
+        print(f"Lỗi trong analytics insights: {str(e)}")
+        return {"error": str(e)}, 500
+
+
+@api.route("/api/analytics/topic/<topic_name>", methods=["POST", "OPTIONS"])
+def get_topic_insights(topic_name):
+    """Lấy insights chi tiết cho một topic cụ thể"""
+    if request.method == "OPTIONS":
+        return {}, 200
+    
+    try:
+        req = request.get_json()
+        learning_data = req.get("learning_data", {})
+        
+        topic_data = analytics.get_topic_insights(learning_data, topic_name)
+        
+        return {
+            "status": "success",
+            "data": topic_data
+        }, 200
+        
+    except Exception as e:
+        print(f"Lỗi trong topic insights: {str(e)}")
+        return {"error": str(e)}, 500
+
+
+@api.route("/api/analytics/study-plan", methods=["POST", "OPTIONS"])
+def generate_study_plan():
+    """Tạo study plan dựa trên analytics"""
+    if request.method == "OPTIONS":
+        return {}, 200
+    
+    try:
+        req = request.get_json()
+        learning_data = req.get("learning_data", {})
+        
+        study_plan = analytics.generate_study_plan(learning_data)
+        
+        return {
+            "status": "success",
+            "data": study_plan
+        }, 200
+        
+    except Exception as e:
+        print(f"Lỗi trong study plan: {str(e)}")
+        return {"error": str(e)}, 500

@@ -1,10 +1,12 @@
 // Utility để quản lý IndexedDB cho việc lưu trữ resources và user profile
 
 const DB_NAME = 'AILearningPlatformDB';
-const DB_VERSION = 4; // Tăng version để thêm chat store
+const DB_VERSION = 5; // Tăng version để thêm analytics stores
 const STORE_NAME = 'resources';
 const USER_STORE_NAME = 'userProfile';
 const CHAT_STORE_NAME = 'chatConversations';
+const LEARNING_ACTIVITIES_STORE = 'learningActivities';
+const QUIZ_RESULTS_STORE = 'quizResults';
 
 // Khởi tạo database
 const initDB = () => {
@@ -23,7 +25,7 @@ const initDB = () => {
       console.log('📊 Object stores có sẵn:', Array.from(db.objectStoreNames));
       
       // Kiểm tra xem có đủ stores không
-      const requiredStores = [STORE_NAME, USER_STORE_NAME, CHAT_STORE_NAME];
+      const requiredStores = [STORE_NAME, USER_STORE_NAME, CHAT_STORE_NAME, LEARNING_ACTIVITIES_STORE, QUIZ_RESULTS_STORE];
       const missingStores = requiredStores.filter(store => !db.objectStoreNames.contains(store));
       
       if (missingStores.length > 0) {
@@ -85,6 +87,31 @@ const initDB = () => {
         chatStore.createIndex('title', 'title', { unique: false });
       } else {
         console.log('✅ Object store đã tồn tại:', CHAT_STORE_NAME);
+      }
+
+      // Tạo object store cho learning activities nếu chưa tồn tại
+      if (!db.objectStoreNames.contains(LEARNING_ACTIVITIES_STORE)) {
+        console.log('➕ Tạo object store:', LEARNING_ACTIVITIES_STORE);
+        const activitiesStore = db.createObjectStore(LEARNING_ACTIVITIES_STORE, { keyPath: 'id', autoIncrement: true });
+        activitiesStore.createIndex('timestamp', 'timestamp', { unique: false });
+        activitiesStore.createIndex('topic', 'topic', { unique: false });
+        activitiesStore.createIndex('activityType', 'activityType', { unique: false });
+        activitiesStore.createIndex('date', 'date', { unique: false });
+      } else {
+        console.log('✅ Object store đã tồn tại:', LEARNING_ACTIVITIES_STORE);
+      }
+
+      // Tạo object store cho quiz results nếu chưa tồn tại
+      if (!db.objectStoreNames.contains(QUIZ_RESULTS_STORE)) {
+        console.log('➕ Tạo object store:', QUIZ_RESULTS_STORE);
+        const quizResultsStore = db.createObjectStore(QUIZ_RESULTS_STORE, { keyPath: 'id', autoIncrement: true });
+        quizResultsStore.createIndex('timestamp', 'timestamp', { unique: false });
+        quizResultsStore.createIndex('topic', 'topic', { unique: false });
+        quizResultsStore.createIndex('subtopic', 'subtopic', { unique: false });
+        quizResultsStore.createIndex('score', 'score', { unique: false });
+        quizResultsStore.createIndex('date', 'date', { unique: false });
+      } else {
+        console.log('✅ Object store đã tồn tại:', QUIZ_RESULTS_STORE);
       }
       
       console.log('✅ Database upgrade hoàn tất');
@@ -760,5 +787,197 @@ export const updateChatConversation = async (conversationId, newMessages) => {
   } catch (error) {
     console.error('Lỗi khi cập nhật conversation:', error);
     throw error;
+  }
+};
+
+// ===== LEARNING ACTIVITIES TRACKING =====
+
+export const saveLearningActivity = async (activityData) => {
+  try {
+    const db = await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([LEARNING_ACTIVITIES_STORE], 'readwrite');
+      const objectStore = transaction.objectStore(LEARNING_ACTIVITIES_STORE);
+      
+      const dataToSave = {
+        ...activityData,
+        timestamp: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
+      };
+      
+      const request = objectStore.add(dataToSave);
+      
+      request.onsuccess = () => {
+        console.log('✅ Đã lưu learning activity');
+        resolve(request.result);
+      };
+      
+      request.onerror = () => {
+        reject('Lỗi khi lưu learning activity');
+      };
+      
+      transaction.oncomplete = () => {
+        // db.close();
+      };
+    });
+  } catch (error) {
+    console.error('Lỗi khi lưu learning activity:', error);
+    throw error;
+  }
+};
+
+export const getAllLearningActivities = async () => {
+  try {
+    const db = await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([LEARNING_ACTIVITIES_STORE], 'readonly');
+      const objectStore = transaction.objectStore(LEARNING_ACTIVITIES_STORE);
+      
+      const request = objectStore.getAll();
+      
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      
+      request.onerror = () => {
+        reject('Lỗi khi lấy learning activities');
+      };
+      
+      transaction.oncomplete = () => {
+        // db.close();
+      };
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy learning activities:', error);
+    throw error;
+  }
+};
+
+// ===== QUIZ RESULTS TRACKING =====
+
+export const saveQuizResult = async (quizData) => {
+  try {
+    const db = await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([QUIZ_RESULTS_STORE], 'readwrite');
+      const objectStore = transaction.objectStore(QUIZ_RESULTS_STORE);
+      
+      const dataToSave = {
+        ...quizData,
+        timestamp: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
+        passed: quizData.score >= 70,
+      };
+      
+      const request = objectStore.add(dataToSave);
+      
+      request.onsuccess = () => {
+        console.log('✅ Đã lưu quiz result');
+        resolve(request.result);
+      };
+      
+      request.onerror = () => {
+        reject('Lỗi khi lưu quiz result');
+      };
+      
+      transaction.oncomplete = () => {
+        // db.close();
+      };
+    });
+  } catch (error) {
+    console.error('Lỗi khi lưu quiz result:', error);
+    throw error;
+  }
+};
+
+export const getAllQuizResults = async () => {
+  try {
+    const db = await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([QUIZ_RESULTS_STORE], 'readonly');
+      const objectStore = transaction.objectStore(QUIZ_RESULTS_STORE);
+      
+      const request = objectStore.getAll();
+      
+      request.onsuccess = () => {
+        const results = request.result.sort((a, b) => 
+          new Date(b.timestamp) - new Date(a.timestamp)
+        );
+        resolve(results);
+      };
+      
+      request.onerror = () => {
+        reject('Lỗi khi lấy quiz results');
+      };
+      
+      transaction.oncomplete = () => {
+        // db.close();
+      };
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy quiz results:', error);
+    throw error;
+  }
+};
+
+export const calculateTimeSpentByTopic = async () => {
+  try {
+    const activities = await getAllLearningActivities();
+    
+    const timeByTopic = {};
+    activities.forEach(activity => {
+      const topic = activity.topic || 'Unknown';
+      const duration = activity.duration || 0;
+      
+      timeByTopic[topic] = (timeByTopic[topic] || 0) + duration;
+    });
+    
+    return timeByTopic;
+  } catch (error) {
+    console.error('Lỗi khi tính time spent:', error);
+    return {};
+  }
+};
+
+export const getAnalyticsData = async () => {
+  try {
+    const [activities, quizResults, timeSpent] = await Promise.all([
+      getAllLearningActivities(),
+      getAllQuizResults(),
+      calculateTimeSpentByTopic()
+    ]);
+    
+    const topics = [...new Set([
+      ...activities.map(a => a.topic).filter(Boolean),
+      ...quizResults.map(q => q.topic).filter(Boolean)
+    ])];
+    
+    return {
+      learning_activities: activities,
+      quiz_results: quizResults.map(q => ({
+        topic: q.topic,
+        subtopic: q.subtopic,
+        score: q.score,
+        total_questions: q.totalQuestions,
+        correct_answers: q.correctAnswers,
+        time_spent: q.timeSpent,
+        timestamp: q.timestamp,
+        passed: q.passed
+      })),
+      time_spent: timeSpent,
+      current_topics: topics
+    };
+  } catch (error) {
+    console.error('Lỗi khi lấy analytics data:', error);
+    return {
+      learning_activities: [],
+      quiz_results: [],
+      time_spent: {},
+      current_topics: []
+    };
   }
 };

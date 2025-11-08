@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import "./header.css";
-import { Database, MessageCircle } from "lucide-react";
+import { Database, MessageCircle, BarChart3 } from "lucide-react";
 
 const Header = ({ chatStyle = false }) => {
   return (
@@ -12,6 +12,9 @@ const Header = ({ chatStyle = false }) => {
         </div>
       </NavLink>
       <div className="nav-icons">
+        <NavLink to="/analytics" className={"Analytics"} title="Learning Analytics">
+          <BarChart3 size={35} strokeWidth={1.5} color="white"></BarChart3>
+        </NavLink>
         <NavLink to="/chat" className={"ChatBot"} title="Trợ lý AI">
           <MessageCircle size={35} strokeWidth={1.5} color="white"></MessageCircle>
         </NavLink>

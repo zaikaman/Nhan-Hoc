@@ -2,7 +2,7 @@ import React from "react";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import { TopicPage, RoadmapPage, QuizPage, ProfilePage, ResourcesPage } from "./pages/index";
+import { TopicPage, RoadmapPage, QuizPage, ProfilePage, ResourcesPage, AnalyticsPage } from "./pages/index";
 import App from "./App";
 import AppWrapper from "./AppWrapper";
 import DebugDBPage from "./pages/debug/debugDB";
@@ -37,6 +37,10 @@ const router = createBrowserRouter([
   {
     path: "/resources/",
     element: <ResourcesPage />,
+  },
+  {
+    path: "/analytics/",
+    element: <AnalyticsPage />,
   },
   {
     path: "/chat/",

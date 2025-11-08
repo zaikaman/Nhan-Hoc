@@ -9,6 +9,7 @@ import {
   deleteResource,
   clearAllResources,
   getResourceStats,
+  saveLearningActivity,
 } from "../../utils/indexedDB";
 import { Trash2, Database, FolderOpen } from "lucide-react";
 import Markdown from "react-markdown";
@@ -18,6 +19,7 @@ const ResourcesPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedResource, setSelectedResource] = useState(null);
   const [filterTopic, setFilterTopic] = useState("all");
+  const [viewStartTime, setViewStartTime] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,6 +27,35 @@ const ResourcesPage = () => {
     loadStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterTopic]);
+
+  // 📊 TRACKING: Theo dõi thời gian xem tài liệu
+  useEffect(() => {
+    if (selectedResource) {
+      // Bắt đầu đếm thời gian khi chọn resource
+      setViewStartTime(Date.now());
+      
+      return () => {
+        // Khi unmount hoặc chuyển sang resource khác, lưu thời gian đã xem
+        if (viewStartTime) {
+          const duration = Math.round((Date.now() - viewStartTime) / 1000); // seconds
+          
+          // Chỉ lưu nếu xem ít nhất 5 giây
+          if (duration >= 5) {
+            saveLearningActivity({
+              topic: selectedResource.topic,
+              subtopic: selectedResource.subtopic,
+              activityType: 'view_resource',
+              duration: duration,
+            }).then(() => {
+              console.log(`✅ Đã lưu ${duration}s xem tài liệu: ${selectedResource.subtopic}`);
+            }).catch(error => {
+              console.error('❌ Lỗi khi lưu analytics:', error);
+            });
+          }
+        }
+      };
+    }
+  }, [selectedResource, viewStartTime]);
 
   const loadResources = async () => {
     try {

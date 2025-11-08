@@ -6,6 +6,7 @@ import Header from "../../components/header/header";
 import Loader from "../../components/loader/loader";
 import API_CONFIG from "../../config/api";
 import { CircleCheck, CircleX } from "lucide-react";
+import { saveQuizResult, saveLearningActivity } from "../../utils/indexedDB";
 
 // Helper function để đảm bảo answerIndex là số nguyên
 const normalizeQuizData = (questions) => {
@@ -290,7 +291,7 @@ const QuizPage = (props) => {
       <div className="submit">
         <button
           className="SubmitButton"
-          onClick={() => {
+          onClick={async () => {
             if (!window.timeTaken) {
               let time = new Date().getTime() - window.startTime;
               window.timeTaken = time;
@@ -313,6 +314,34 @@ const QuizPage = (props) => {
                 (window.timeTaken / (5 * 60 * 1000 * window.numQues));
             localStorage.setItem("hardnessIndex", hardnessIndex);
             localStorage.setItem("quizStats", JSON.stringify(quizStats));
+            
+            // 📊 LƯU DỮ LIỆU CHO ANALYTICS
+            try {
+              const score = (window.numCorrect * 100) / window.numQues;
+              
+              // Lưu kết quả quiz
+              await saveQuizResult({
+                topic: topic,
+                subtopic: subtopic,
+                score: score,
+                totalQuestions: window.numQues,
+                correctAnswers: window.numCorrect,
+                timeSpent: Math.round(window.timeTaken / 1000), // seconds
+              });
+              
+              // Lưu hoạt động học tập
+              await saveLearningActivity({
+                topic: topic,
+                subtopic: subtopic,
+                activityType: 'quiz',
+                duration: Math.round(window.timeTaken / 1000), // seconds
+                score: score,
+              });
+              
+              console.log('✅ Đã lưu dữ liệu analytics cho quiz');
+            } catch (error) {
+              console.error('❌ Lỗi khi lưu analytics:', error);
+            }
             
             // Hiển thị kết quả thay vì navigate ngay
             setQuizResult({
