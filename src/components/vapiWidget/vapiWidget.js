@@ -235,7 +235,6 @@ PHONG CÁCH:
           ) : (
             <Phone size={24} />
           )}
-          <span>{isLoading ? 'Đang kết nối...' : 'Trò chuyện'}</span>
         </button>
       ) : (
         <div className="vapi-active-call">
