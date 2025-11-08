@@ -16,10 +16,6 @@ const AnalyticsPage = () => {
   const [insights, setInsights] = useState(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
 
-  useEffect(() => {
-    loadAnalytics();
-  }, []);
-
   const loadAnalytics = async () => {
     try {
       setLoading(true);
@@ -163,6 +159,10 @@ const AnalyticsPage = () => {
 
     await checkStatus();
   };
+
+  useEffect(() => {
+    loadAnalytics();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Chuẩn bị dữ liệu cho charts
   const prepareChartData = () => {

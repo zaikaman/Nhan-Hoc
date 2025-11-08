@@ -26,10 +26,6 @@ const RecommendationsPage = () => {
   const [nextTopics, setNextTopics] = useState([]);
   const [difficultyAdjustment, setDifficultyAdjustment] = useState(null);
 
-  useEffect(() => {
-    loadRecommendations();
-  }, []);
-
   const loadRecommendations = async () => {
     try {
       setLoading(true);
@@ -139,6 +135,10 @@ const RecommendationsPage = () => {
 
     await checkStatus();
   };
+
+  useEffect(() => {
+    loadRecommendations();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getPriorityIcon = (priority) => {
     switch (priority) {
