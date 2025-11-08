@@ -12,10 +12,18 @@ import {
   LoaderPinwheel,
   FolderSearch,
   Bot,
+  Database,
+  Trash2,
 } from "lucide-react";
 import { translateLocalStorage, translateObj } from "../../translate/translate";
 import Markdown from "react-markdown";
 import ConfettiExplosion from "react-confetti-explosion";
+import { 
+  saveResource, 
+  getResource, 
+  resourceExists,
+  deleteResource 
+} from "../../utils/indexedDB";
 
 const RoadmapPage = (props) => {
   const [resources, setResources] = useState(null);
@@ -30,6 +38,7 @@ const RoadmapPage = (props) => {
   });
   const [quizStats, setQuizStats] = useState({});
   const [confettiExplode, setConfettiExplode] = useState(false);
+  const [hasCache, setHasCache] = useState(false);
   const navigate = useNavigate();
   const topic = searchParams.get("topic");
   if (!topic) {
@@ -226,45 +235,140 @@ const RoadmapPage = (props) => {
     );
   };
   const ResourcesSection = ({ children }) => {
+    // Kiểm tra cache khi component mount hoặc resourceParam thay đổi
+    useEffect(() => {
+      if (resourceParam.topic && resourceParam.subtopic) {
+        checkCache();
+      }
+    }, [resourceParam]);
+
+    const checkCache = async () => {
+      try {
+        const exists = await resourceExists(resourceParam.course, resourceParam.subtopic);
+        setHasCache(exists);
+      } catch (error) {
+        console.error('Lỗi khi kiểm tra cache:', error);
+        setHasCache(false);
+      }
+    };
+
+    const loadFromCache = async () => {
+      try {
+        setLoading(true);
+        const cachedResource = await getResource(resourceParam.course, resourceParam.subtopic);
+        
+        if (cachedResource) {
+          setLoading(false);
+          setResources(
+            <div className="res">
+              <div className="res-header">
+                <h2 className="res-heading">{cachedResource.subtopic}</h2>
+                <button 
+                  className="delete-cache-btn"
+                  onClick={async () => {
+                    if (window.confirm('Bạn có chắc muốn xóa tài nguyên này khỏi bộ nhớ?')) {
+                      await deleteResource(resourceParam.course, resourceParam.subtopic);
+                      setResources(null);
+                      setHasCache(false);
+                      alert('Đã xóa tài nguyên khỏi bộ nhớ');
+                    }
+                  }}
+                  title="Xóa khỏi bộ nhớ"
+                >
+                  <Trash2 size={20} />
+                </button>
+              </div>
+              <p className="cached-info">
+                📦 Đã lưu từ cache • {new Date(cachedResource.timestamp).toLocaleString('vi-VN')}
+              </p>
+              <Markdown>{cachedResource.content}</Markdown>
+            </div>
+          );
+          setTimeout(() => {
+            setConfettiExplode(true);
+          }, 300);
+        } else {
+          setLoading(false);
+          alert('Không tìm thấy tài nguyên trong bộ nhớ');
+        }
+      } catch (error) {
+        setLoading(false);
+        console.error('Lỗi khi load từ cache:', error);
+        alert('Lỗi khi tải tài nguyên từ bộ nhớ');
+      }
+    };
+
+    const generateNewResource = async () => {
+      setLoading(true);
+      axios.defaults.baseURL = "http://localhost:5000";
+
+      try {
+        const res = await axios({
+          method: "POST",
+          url: "/api/generate-resource",
+          data: resourceParam,
+          withCredentials: false,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+
+        // Lưu vào IndexedDB
+        const resourceData = {
+          topic: resourceParam.course,
+          subtopic: resourceParam.subtopic,
+          description: resourceParam.description,
+          time: resourceParam.time,
+          knowledge_level: resourceParam.knowledge_level,
+          content: res.data,
+        };
+
+        await saveResource(resourceData);
+        console.log('✅ Đã lưu resource vào IndexedDB');
+
+        setLoading(false);
+        setResources(
+          <div className="res">
+            <div className="res-header">
+              <h2 className="res-heading">{resourceParam.subtopic}</h2>
+              <span className="saved-badge">💾 Đã lưu vào bộ nhớ</span>
+            </div>
+            <Markdown>{res.data}</Markdown>
+          </div>
+        );
+        setHasCache(true);
+        
+        setTimeout(() => {
+          setConfettiExplode(true);
+          console.log("exploding confetti...");
+        }, 500);
+      } catch (err) {
+        setLoading(false);
+        console.error('Lỗi:', err);
+        alert("Lỗi khi tạo tài nguyên");
+        navigate("/roadmap?topic=" + encodeURI(topic));
+      }
+    };
+
     return (
       <div className="flexbox resources">
         <div className="generativeFill">
+          {hasCache && (
+            <button
+              className="primary cache-button"
+              onClick={loadFromCache}
+              style={{ marginBottom: '1rem' }}
+            >
+              <Database size={70} strokeWidth={1} className="icon"></Database>
+              Tải từ bộ nhớ đã lưu
+            </button>
+          )}
           <button
             className="primary"
-            onClick={() => {
-              setLoading(true);
-              axios.defaults.baseURL = "http://localhost:5000";
-
-              axios({
-                method: "POST",
-                url: "/api/generate-resource",
-                data: resourceParam,
-                withCredentials: false,
-                headers: {
-                  "Access-Control-Allow-Origin": "*",
-                },
-              })
-                .then((res) => {
-                  setLoading(false);
-                  setResources(
-                    <div className="res">
-                      <h2 className="res-heading">{resourceParam.subtopic}</h2>
-                      <Markdown>{res.data}</Markdown>
-                    </div>
-                  );
-                  setTimeout(() => {
-                    setConfettiExplode(true);
-                    console.log("exploding confetti...");
-                  }, 500);
-                })
-                .catch((err) => {
-                  setLoading(false);
-                  alert("lỗi khi tạo tài nguyên");
-                  navigate("/roadmap?topic=" + encodeURI(topic));
-                });
-            }}
+            onClick={generateNewResource}
           >
-            <Bot size={70} strokeWidth={1} className="icon"></Bot> Tài nguyên được tạo bởi AI
+            <Bot size={70} strokeWidth={1} className="icon"></Bot> 
+            {hasCache ? 'Tạo lại bằng AI' : 'Tài nguyên được tạo bởi AI'}
           </button>
         </div>
         {/* OR */}

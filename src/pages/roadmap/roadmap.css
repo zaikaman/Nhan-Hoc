@@ -154,6 +154,51 @@
   font-size: 3rem;
   line-height: 1.1em;
 }
+.res-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.delete-cache-btn {
+  background-color: rgba(255, 59, 59, 0.2) !important;
+  border: 2px solid #ff3b3b !important;
+  color: #ff3b3b !important;
+  padding: 0.8em 1.2em !important;
+  border-radius: 10px !important;
+  cursor: pointer;
+  transition: 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem !important;
+  width: auto !important;
+  min-width: auto !important;
+}
+.delete-cache-btn:hover {
+  background-color: #ff3b3b !important;
+  color: white !important;
+  transform: scale(1.05);
+}
+.saved-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.5em 1em;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cached-info {
+  background-color: rgba(102, 126, 234, 0.2);
+  border-left: 4px solid #667eea;
+  padding: 1em 1.5em;
+  border-radius: 8px;
+  margin-bottom: 2rem !important;
+  color: #a0aec0;
+  font-size: 0.95rem;
+}
 
 .resources button {
   position: relative;
@@ -172,6 +217,16 @@
 .resources button.primary {
   background-color: white;
   color: black;
+}
+.resources button.cache-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+}
+.resources button.cache-button:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  color: white;
+  box-shadow: 0 0 25px rgba(102, 126, 234, 0.5);
 }
 .resources button:hover {
   background-color: white;
