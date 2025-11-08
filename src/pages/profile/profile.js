@@ -159,6 +159,7 @@ const ProfilePage = (props) => {
             {Object.keys(topics).map((course, i) => {
               return (
                 <NavLink
+                  key={course}
                   className="link"
                   to={"/roadmap?topic=" + encodeURI(course)}
                 >
