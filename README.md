@@ -1054,6 +1054,9 @@ Dự án được phát triển bởi sinh viên **Team Double2T** cho **SGU Hac
 - **[Đinh Phúc Thịnh]** - *Project Lead & Full-stack Developer*
   - 🌐 [GitHub](https://github.com/zaikaman)
   - 📧 Email: zaikaman123@gmail.com
+- **[Nguyễn Ngọc Tuấn]** - *Fullstack Mobile Developer*
+  - 🌐 [GitHub](https://github.com/DanhCaTuanNgoc)
+  - 📧 Email: ngoctuan090904@gmail.com
 
 ### Acknowledgments
 
